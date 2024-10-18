@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String    @unique
+  password    String
+  role        String    @default("user")  // Possible values: "user", "admin", "instructor"
+  enrollments Enrollment[]
+}
+
+model Course {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  syllabus    String
+  lessons     Lesson[]  
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  User      User   @relation(fields: [userId], references: [id])
+  Course    Course @relation(fields: [courseId], references: [id])
+}
+
+model Lesson {
+  id          Int    @id @default(autoincrement())
+  title       String
+  content     String
+  pdfUrl      String?
+  courseId    Int
+  Course      Course @relation(fields: [courseId], references: [id])
+  quizzes     Quiz[]
+}
+
+model Quiz {
+  id          Int    @id @default(autoincrement())
+  question    String
+  options     String[]
+  correctAnswer String
+  lessonId    Int
+  Lesson      Lesson @relation(fields: [lessonId], references: [id])
+}
