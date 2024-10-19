@@ -1,10 +1,12 @@
-const { PrismaClient } = require('@prisma/client');
-const jwt = require('jsonwebtoken');
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
 // Middleware to verify admin role
 const verifyAdmin = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  // const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.authToken;
   if (!token) return res.status(403).json({ error: 'No token provided' });
 
   try {
@@ -24,4 +26,4 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = verifyAdmin;
+export default verifyAdmin;

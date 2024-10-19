@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -13,22 +14,22 @@ const LoginForm = () => {
     try {
       const response = await axios.post(
         "http://localhost:5000/api/auth/login",
-        formData
+        formData, {
+          withCredentials: true,
+        }
       );
-      localStorage.setItem("token", response.data.token);
+      // localStorage.setItem("token", response.data.token);
+      Cookies.set("authToken", response.data.token, { expires: 1 });
+      console.log('authtoken',data.token)
       alert("Login successful");
     } catch (error) {
+      const errorMessage = error.response?.data?.message || "Login failed";
+      alert(errorMessage);
       alert("Login failed");
     }
   };
 
   return (
-    // <form onSubmit={handleSubmit}>
-    //   <input type="email" name="email" placeholder="Email" onChange={handleChange} required />
-    //   <input type="password" name="password" placeholder="Password" onChange={handleChange} required />
-    //   <button type="submit">Login</button>
-    // </form>
-    <>
       <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <img
@@ -42,7 +43,12 @@ const LoginForm = () => {
         </div>
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-          <form action="#" method="POST" className="space-y-6">
+          <form
+            action="#"
+            method="POST"
+            className="space-y-6"
+            onSubmit={handleSubmit}
+          >
             <div>
               <label
                 htmlFor="email"
@@ -57,6 +63,8 @@ const LoginForm = () => {
                   type="email"
                   required
                   autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
@@ -86,6 +94,8 @@ const LoginForm = () => {
                   type="password"
                   required
                   autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
               </div>
@@ -112,7 +122,6 @@ const LoginForm = () => {
           </p>
         </div>
       </div>
-    </>
   );
 };
 

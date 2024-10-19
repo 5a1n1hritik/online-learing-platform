@@ -1,6 +1,7 @@
-const express = require("express");
-const { PrismaClient } = require("@prisma/client");
-const verifyAdmin = require("../middlewares/verifyAdmin");
+import express from 'express';
+import { PrismaClient } from "@prisma/client";
+import verifyAdmin from "../middlewares/verifyAdmin.js";
+
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -134,4 +135,4 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

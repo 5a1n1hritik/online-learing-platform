@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 const AdminDashboard = () => {
   const [courses, setCourses] = useState([]);
   const [users, setUsers] = useState([]);
-  const [newCourse, setNewCourse] = useState({ title: '', description: '', syllabus: '' });
-  const [newUser, setNewUser] = useState({ name: '', role: '' });
+  const [newCourse, setNewCourse] = useState({
+    title: "",
+    description: "",
+    syllabus: "",
+  });
+  const [newUser, setNewUser] = useState({ name: "", role: "" });
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,16 +25,21 @@ const AdminDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const courseRes = await axios.get('http://localhost:5000/api/admin/courses', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      const userRes = await axios.get('http://localhost:5000/api/admin/users', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      console.log(localStorage.getItem("token"))
+      const courseRes = await axios.get(
+        "http://localhost:5000/api/admin/courses",
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      const userRes = await axios.get("http://localhost:5000/api/admin/users", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setCourses(courseRes.data);
       setUsers(userRes.data);
     } catch (error) {
-      setError('Error fetching data');
+      setError("Error fetching data");
     } finally {
       setLoading(false);
     }
@@ -39,25 +48,30 @@ const AdminDashboard = () => {
   const createCourse = async () => {
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/courses',
+        "http://localhost:5000/api/admin/courses",
         newCourse,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
       setCourses([...courses, res.data]);
-      setNewCourse({ title: '', description: '', syllabus: '' });
+      setNewCourse({ title: "", description: "", syllabus: "" });
     } catch (error) {
-      console.error('Error creating course', error);
+      console.error("Error creating course", error);
     }
   };
 
   const deleteCourse = async (courseId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/courses/${courseId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      await axios.delete(
+        `http://localhost:5000/api/admin/courses/${courseId}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       setCourses(courses.filter((course) => course.id !== courseId));
     } catch (error) {
-      console.error('Error deleting course', error);
+      console.error("Error deleting course", error);
     }
   };
 
@@ -66,37 +80,43 @@ const AdminDashboard = () => {
       const res = await axios.put(
         `http://localhost:5000/api/admin/courses/${editingCourse.id}`,
         editingCourse,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
-      setCourses(courses.map((course) => (course.id === res.data.id ? res.data : course)));
+      setCourses(
+        courses.map((course) => (course.id === res.data.id ? res.data : course))
+      );
       setEditingCourse(null);
     } catch (error) {
-      console.error('Error editing course', error);
+      console.error("Error editing course", error);
     }
   };
 
   const createUser = async () => {
     try {
       const res = await axios.post(
-        'http://localhost:5000/api/admin/users',
+        "http://localhost:5000/api/admin/users",
         newUser,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
       setUsers([...users, res.data]);
-      setNewUser({ name: '', role: '' });
+      setNewUser({ name: "", role: "" });
     } catch (error) {
-      console.error('Error creating user', error);
+      console.error("Error creating user", error);
     }
   };
 
   const deleteUser = async (userId) => {
     try {
       await axios.delete(`http://localhost:5000/api/admin/users/${userId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setUsers(users.filter((user) => user.id !== userId));
     } catch (error) {
-      console.error('Error deleting user', error);
+      console.error("Error deleting user", error);
     }
   };
 
@@ -105,12 +125,16 @@ const AdminDashboard = () => {
       const res = await axios.put(
         `http://localhost:5000/api/admin/users/${editingUser.id}`,
         editingUser,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
       );
-      setUsers(users.map((user) => (user.id === res.data.id ? res.data : user)));
+      setUsers(
+        users.map((user) => (user.id === res.data.id ? res.data : user))
+      );
       setEditingUser(null);
     } catch (error) {
-      console.error('Error editing user', error);
+      console.error("Error editing user", error);
     }
   };
 
@@ -125,9 +149,9 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <h2>Admin Dashboard</h2>
+      <h2 className="text-4xl font-black text-sky-600">Admin Dashboard</h2>
       {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <div className="metrics">
         <div>
@@ -156,19 +180,25 @@ const AdminDashboard = () => {
           type="text"
           placeholder="Title"
           value={newCourse.title}
-          onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+          onChange={(e) =>
+            setNewCourse({ ...newCourse, title: e.target.value })
+          }
         />
         <input
           type="text"
           placeholder="Description"
           value={newCourse.description}
-          onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
+          onChange={(e) =>
+            setNewCourse({ ...newCourse, description: e.target.value })
+          }
         />
         <input
           type="text"
           placeholder="Syllabus"
           value={newCourse.syllabus}
-          onChange={(e) => setNewCourse({ ...newCourse, syllabus: e.target.value })}
+          onChange={(e) =>
+            setNewCourse({ ...newCourse, syllabus: e.target.value })
+          }
         />
         <button onClick={createCourse}>Create Course</button>
 
@@ -179,19 +209,28 @@ const AdminDashboard = () => {
               type="text"
               placeholder="Title"
               value={editingCourse.title}
-              onChange={(e) => setEditingCourse({ ...editingCourse, title: e.target.value })}
+              onChange={(e) =>
+                setEditingCourse({ ...editingCourse, title: e.target.value })
+              }
             />
             <input
               type="text"
               placeholder="Description"
               value={editingCourse.description}
-              onChange={(e) => setEditingCourse({ ...editingCourse, description: e.target.value })}
+              onChange={(e) =>
+                setEditingCourse({
+                  ...editingCourse,
+                  description: e.target.value,
+                })
+              }
             />
             <input
               type="text"
               placeholder="Syllabus"
               value={editingCourse.syllabus}
-              onChange={(e) => setEditingCourse({ ...editingCourse, syllabus: e.target.value })}
+              onChange={(e) =>
+                setEditingCourse({ ...editingCourse, syllabus: e.target.value })
+              }
             />
             <button onClick={editCourse}>Save Changes</button>
             <button onClick={() => setEditingCourse(null)}>Cancel</button>
@@ -230,13 +269,17 @@ const AdminDashboard = () => {
               type="text"
               placeholder="Name"
               value={editingUser.name}
-              onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+              onChange={(e) =>
+                setEditingUser({ ...editingUser, name: e.target.value })
+              }
             />
             <input
               type="text"
               placeholder="Role"
               value={editingUser.role}
-              onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+              onChange={(e) =>
+                setEditingUser({ ...editingUser, role: e.target.value })
+              }
             />
             <button onClick={editUser}>Save Changes</button>
             <button onClick={() => setEditingUser(null)}>Cancel</button>
@@ -245,7 +288,10 @@ const AdminDashboard = () => {
       </div>
 
       <div className="pagination">
-        <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+        <button
+          onClick={() => setCurrentPage(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
           Previous
         </button>
         <span>Page {currentPage}</span>
