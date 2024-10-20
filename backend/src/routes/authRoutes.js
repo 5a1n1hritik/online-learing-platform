@@ -50,9 +50,20 @@ router.post("/register", validateRegisterInput, async (req, res) => {
       },
     });
 
-    res
-      .status(201)
-      .json({ message: "User registered successfully", userId: user.id });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({ message: "User registered successfully", token });
   } catch (error) {
     console.error("Error registering user:", error);
     res
@@ -62,8 +73,7 @@ router.post("/register", validateRegisterInput, async (req, res) => {
 });
 
 // Route to log in a user
-router.post(
-  "/login",
+router.post("/login",
   cors({ origin: "http://localhost:5173", credentials: true }),
   validateLoginInput,
   async (req, res) => {
@@ -75,7 +85,7 @@ router.post(
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email },
+        { id: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: "1d" }
       );
