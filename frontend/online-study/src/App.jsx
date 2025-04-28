@@ -1,24 +1,31 @@
-import React from 'react';
-import { Route, Routes } from 'react-router-dom';
-import LoginForm from './components/LoginFrom';
-import RegistrationForm from './components/RegistrationFrom';
-import Dashboard from './components/Dashboard';
-import CourseList from './components/CourseList';
-import CourseDetails from './components/CourseDetails';
-import EnrolledCourses from './components/EnrolledCourses';
-import AdminDashboard from './components/AdminDashboard';
+import React from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
+import Register from "./components/Register";
+import Login from "./components/Login";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
+import Home from "./page/Home";
+import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
 
 function App() {
+  const location = useLocation();
+  const isAdminDashboard = location.pathname.startsWith("/admin");
+
   return (
-    <Routes>
-      <Route path="/login" element={<LoginForm />} />
-      <Route path="/register" element={<RegistrationForm />} />
-      <Route path="/user/dashboard" element={<Dashboard />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-      <Route path="/" element={<CourseList />} />
-      <Route path="/courses/:id" element={<CourseDetails />} />
-      <Route path="/dashboard/enrolledcourses" element={<EnrolledCourses />} />
-    </Routes>
+    <div>
+      {!isAdminDashboard && <Navbar />}
+
+      <Routes>
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        {/* <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} /> */}
+        <Route path="/" element={<Home />} />
+      </Routes>
+
+      {!isAdminDashboard && <Footer />}
+    </div>
   );
 }
 
