@@ -1,56 +1,63 @@
-import React from "react";
-import { Link } from "react-router-dom"; // React Router Link
-import { useLocation } from "react-router-dom"; // React Router useLocation
-import { Menu } from "lucide-react";
-import { useState, useEffect } from "react";
-
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Menu,
+  LogOut,
+  Home,
+  BookOpen,
+  FileText,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-// import { ThemeToggle } from "@/components/theme-toggle";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ThemeToggle from "./ThemeToggle";
+import { useUser } from "@/context/UserContext";
 
 const routes = [
   {
     href: "/",
     label: "Home",
+    icon: Home,
   },
   {
     href: "/courses",
     label: "Courses",
+    icon: BookOpen,
   },
   {
     href: "/Exams",
     label: "Exams",
+    icon: FileText,
   },
   {
     href: "/login",
     label: "Login",
+    icon: LogIn,
   },
   {
     href: "/register",
     label: "Register",
+    icon: UserPlus,
   },
 ];
-const user = {
-  name: "John Doe",
-  email: "m@example.com",
-};
-const getInitials = (name) => {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .substring(0, 2);
-};
 
 const Navbar = () => {
-  const { pathname } = useLocation(); // Use useLocation to get current path
+  const { user } = useUser();
+  const { pathname } = useLocation(); 
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -60,7 +67,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Animation on mount
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -100,19 +106,19 @@ const Navbar = () => {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          {/* <ThemeToggle
-            className="animate-fade-in"
+          <ThemeToggle
+            className="animate-fade-in text-muted-foreground"
             style={{ animationDelay: "0.5s" }}
-          /> */}
+          />
           <Avatar
             className="h-8 w-8 hidden md:flex animate-fade-in"
             style={{ animationDelay: "0.6s" }}
           >
             <AvatarImage
-              src={`https://avatar.vercel.sh/${getInitials(user.name)}`}
-              alt="User"
+              src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
+              alt={user?.name || "User"}
             />
-            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            <AvatarFallback>{user?.name || "U"}</AvatarFallback>
           </Avatar>
           <Sheet>
             <SheetTrigger asChild>
@@ -127,7 +133,16 @@ const Navbar = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
-              <nav className="flex flex-col gap-4 mt-8">
+              <SheetHeader>
+                <SheetTitle className="text-lg font-bold gradient-heading">
+                  EduLearn
+                </SheetTitle>
+                <SheetDescription className="text-sm text-muted-foreground mt-2 border-b pb-4">
+                  Welcome to EduLearn! Your one-stop solution for online
+                  learning.
+                </SheetDescription>
+              </SheetHeader>
+              <nav className="flex flex-col gap-4 mt-6">
                 {routes.map((route, index) => (
                   <Link
                     key={route.href}
@@ -140,10 +155,42 @@ const Navbar = () => {
                     )}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
+                    {route.icon && (
+                      <route.icon className="h-4 w-4 mr-1 inline-block" />
+                    )}
+
                     {route.label}
                   </Link>
                 ))}
               </nav>
+
+              <SheetFooter className="border-t pt-2 mt-8">
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage
+                        src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
+                        alt={user?.name || "User"}
+                      />
+                      <AvatarFallback>{user?.name || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">
+                        {user?.name?.replace(/\b\w/g, (l) => l.toUpperCase()) ||
+                          "Student"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {user?.email || "student@example.com"}
+                      </p>
+                    </div>
+                  </div>
+                  <Link to="/logout">
+                    <Button variant="ghost" size="icon" title="Logout">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </SheetFooter>
             </SheetContent>
           </Sheet>
         </div>

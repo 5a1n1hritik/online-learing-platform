@@ -38,7 +38,14 @@ const Login = () => {
       navigate("/"); // Example redirect after successful login
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "An error occurred during login");
+      // Check if the error is due to the user not being found
+      if (err.response?.status === 404) {
+        setError("User not found. Please register first.");
+      } else {
+        setError(
+          err.response?.data?.message || "An error occurred during login"
+        );
+      }
     }
   };
 

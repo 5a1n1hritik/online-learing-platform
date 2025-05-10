@@ -36,9 +36,14 @@ model Course {
   title        String
   description  String
   price        Float
+  imageUrl     String
+  rating       Float        @default(0)
+  studentsCount Int         @default(0)
   instructor   User         @relation("UserToCourses", fields: [instructorId], references: [id])
   instructorId Int
   enrollments  Enrollment[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Enrollment {
@@ -48,4 +53,5 @@ model Enrollment {
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  Int
   createdAt DateTime @default(now())
+  @@unique([userId, courseId])
 }

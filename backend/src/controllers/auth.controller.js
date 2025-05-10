@@ -67,7 +67,7 @@ export const loginUser = async (req, res) => {
     const refreshToken = jwt.sign(
       { id: user.id, role: user.role, email: user.email },
       JWT_REFRESH_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "7d" }
     ); // long
 
     // Set Refresh Token in HttpOnly Secure Cookie
@@ -106,15 +106,18 @@ export const refreshAccessToken = (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
     const newAccessToken = jwt.sign(
-      { id: decoded.id },
+      { id: decoded.id, role: decoded.role, email: decoded.email },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "1h" }
     );
 
     res.status(200).json({ accessToken: newAccessToken });
   } catch (error) {
     console.error(error);
-    res.status(403).json({ message: "Invalid refresh token" });
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Refresh token expired" });
+    }
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 
