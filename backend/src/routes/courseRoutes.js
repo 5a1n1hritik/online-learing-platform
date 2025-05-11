@@ -1,31 +1,29 @@
-import express from 'express';
-import { PrismaClient } from "@prisma/client";
+import express from "express";
+import {
+  createCourse,
+  deleteCourse,
+  enrollInCourse,
+  getAllCourses,
+  getCourseDetails,
+  getEnrolledCourses,
+  getInstructorCourses,
+  getInstructorCoursesById,
+  updateCourse,
+} from "../controllers/course.controller.js";
+import { verifyToken } from "../middlewares/verifyToken.js";
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
-// const registerUser = async (req, res) => {
-router.get('/allCourses',async(req, res) => {
-    try {
-        const courses = await prisma.course.findMany();
-        res.json(courses);
-      } catch (error) {
-        res.status(500).json({ message: 'Failed to fetch courses' });
-      }
-});
-
-// const loginUser = async (req, res) => {
-router.get('/:id/Details',async(req, res) => {
-    const { id } = req.params;
-    try {
-      const course = await prisma.course.findUnique({ where: { id: parseInt(id) } });
-      if (!course) {
-        return res.status(404).json({ message: 'Course not found' });
-      }
-      res.json(course);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch course details' });
-    }
-});
+router.post("/create", verifyToken, createCourse); // Instructors only
+router.get("/all-courses", getAllCourses); // Public: all courses
+router.get("/:id", getCourseDetails); // Public: course details
+router.put("/update/:id", verifyToken, updateCourse); // Instructors only
+router.delete("/delete/:id", verifyToken, deleteCourse); // Instructors only
+router.post("/enroll/:id", verifyToken, enrollInCourse); // Students enroll
+router.get("/my-courses", verifyToken, getEnrolledCourses); // View enrolled
+router.get("/my-courses/:id", verifyToken, getEnrolledCourses); // View enrolled courses by ID
+// router.get("/my-courses/:id/details", verifyToken, getCourseDetails); // View enrolled course details by ID
+router.get("/instructor", verifyToken, getInstructorCourses); // View instructor courses by ID
+router.get("/instructor/:id", verifyToken, getInstructorCoursesById); // View instructor courses by ID
 
 export default router;

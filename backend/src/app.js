@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import csurf from "csurf";
 
 import authRoutes from "./routes/authRoutes.js";
-// import courseRoutes from './routes/course.routes.js';
+import courseRoutes from './routes/courseRoutes.js';
 
 dotenv.config();
 
@@ -42,6 +42,6 @@ app.use(express.json());
 // });
 
 app.use("/api/auth", authRoutes);
-// app.use('/api/courses', courseRoutes);
+app.use('/api/courses', courseRoutes);
 
 export default app;

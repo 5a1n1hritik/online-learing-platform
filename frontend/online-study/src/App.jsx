@@ -7,6 +7,7 @@ import ResetPassword from "./components/ResetPassword";
 import Home from "./page/Home";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
+import Courses from "./page/Courses";
 
 function App() {
   const location = useLocation();
@@ -22,6 +23,7 @@ function App() {
         {/* <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} /> */}
         <Route path="/" element={<Home />} />
+        <Route path="/courses" element={<Courses />} />
       </Routes>
 
       {!isAdminDashboard && <Footer />}
