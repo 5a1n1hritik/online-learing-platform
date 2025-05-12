@@ -8,6 +8,7 @@ import Home from "./page/Home";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import Courses from "./page/Courses";
+import CourseDetails from "./page/CourseDetails";
 
 function App() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function App() {
       <Route path="/reset-password" element={<ResetPassword />} /> */}
         <Route path="/" element={<Home />} />
         <Route path="/courses" element={<Courses />} />
+        <Route path="/courses/:id" element={<CourseDetails />} />
       </Routes>
 
       {!isAdminDashboard && <Footer />}
