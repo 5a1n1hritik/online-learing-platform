@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-// import EnrollButton from "./EnrollButton";
+import EnrollButton from "./EnrollButton";
 
 const CourseCard = ({ course, className, index = 0 }) => {
   const animationDelay = `${index * 0.1}s`;
@@ -70,20 +70,16 @@ const CourseCard = ({ course, className, index = 0 }) => {
         <div className="text-sm font-medium">By {course.instructor.name}</div>
         <div className="flex gap-2">
           <Link to={`/courses/${course.id}`}>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full shimmer"
-            >
+            <Button variant="outline" size="sm" className="rounded-full">
               View Course
             </Button>
           </Link>
-          {/* <EnrollButton
+          <EnrollButton
             courseId={course.id}
             courseTitle={course.title}
             courseDetails={course}
             className="rounded-full shimmer"
-          /> */}
+          />
         </div>
       </CardFooter>
     </Card>
