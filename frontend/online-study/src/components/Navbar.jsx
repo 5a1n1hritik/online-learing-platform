@@ -8,6 +8,9 @@ import {
   FileText,
   LogIn,
   UserPlus,
+  User,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,41 +23,76 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ThemeToggle from "./ThemeToggle";
 import { useUser } from "@/context/UserContext";
+import { Separator } from "@radix-ui/react-dropdown-menu";
 
 const routes = [
   {
     href: "/",
     label: "Home",
     icon: Home,
+    authOnly: false,
   },
   {
     href: "/courses",
     label: "Courses",
     icon: BookOpen,
+    authOnly: false,
   },
   {
     href: "/Exams",
     label: "Exams",
     icon: FileText,
+    authOnly: false,
   },
   {
     href: "/login",
     label: "Login",
     icon: LogIn,
+    authOnly: false,
+    hideWhenAuthenticated: true,
   },
   {
     href: "/register",
     label: "Register",
     icon: UserPlus,
+    authOnly: false,
+    hideWhenAuthenticated: true,
+  },
+];
+
+
+const secondaryNavItems = [
+  {
+    title: "Profile",
+    href: "/profile",
+    icon: User,
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+  },
+  {
+    title: "Help & Support",
+    href: "/help",
+    icon: HelpCircle,
   },
 ];
 
 const Navbar = () => {
   const { user } = useUser();
-  const { pathname } = useLocation(); 
+  const { pathname } = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -87,7 +125,9 @@ const Navbar = () => {
             </span>
           </Link>
           <nav className="hidden md:flex gap-6">
-            {routes.map((route, index) => (
+            {routes
+              .filter((route) => !(user && route.hideWhenAuthenticated))
+            .map((route, index) => (
               <Link
                 key={route.href}
                 to={route.href}
@@ -110,16 +150,57 @@ const Navbar = () => {
             className="animate-fade-in text-muted-foreground"
             style={{ animationDelay: "0.5s" }}
           />
-          <Avatar
-            className="h-8 w-8 hidden md:flex animate-fade-in"
-            style={{ animationDelay: "0.6s" }}
-          >
-            <AvatarImage
-              src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
-              alt={user?.name || "User"}
-            />
-            <AvatarFallback>{user?.name || "U"}</AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Avatar
+                className="h-8 w-8 hidden md:flex cursor-pointer animate-fade-in"
+                style={{ animationDelay: "0.6s" }}
+              >
+                <AvatarImage
+                  src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
+                  alt={user?.name || "User"}
+                />
+                <AvatarFallback>{user?.name || "U"}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="animate-slide-up">
+              <DropdownMenuLabel className="text-sm">
+                {user?.name?.replace(/\b\w/g, (l) => l.toUpperCase()) ||
+                  "Student"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/profile"
+                  className="animate-slide-in-right"
+                  style={{ animationDelay: "0.1s" }}
+                >
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/settings"
+                  className="animate-slide-in-right"
+                  style={{ animationDelay: "0.3s" }}
+                >
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/logout"
+                  className="animate-slide-in-right"
+                  style={{ animationDelay: "0.4s" }}
+                >
+                  Logout
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -160,6 +241,30 @@ const Navbar = () => {
                     )}
 
                     {route.label}
+                  </Link>
+                ))}
+              </nav>
+
+              <Separator className="my-4" />
+
+              <nav className="flex flex-col gap-4 mt-6">
+                {secondaryNavItems.map((route, index) => (
+                  <Link
+                    key={route.href}
+                    to={route.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors hover:text-primary animate-slide-in-right",
+                      pathname === route.href
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {route.icon && (
+                      <route.icon className="h-4 w-4 mr-1 inline-block" />
+                    )}
+
+                    {route.title}
                   </Link>
                 ))}
               </nav>

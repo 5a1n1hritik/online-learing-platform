@@ -1,10 +1,12 @@
-import React from 'react'
-import { ArrowRight, BookOpen, Users, Award, CheckCircle } from "lucide-react"
-import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import FeaturedCourses from "@/components/FeaturedCourses.jsx"
-import Testimonials from "@/components/Testimonials.jsx"
+import React from "react";
+import { ArrowRight, BookOpen, Users, Award, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import FeaturedCourses from "@/components/FeaturedCourses.jsx";
+import Testimonials from "@/components/Testimonials.jsx";
+
+import heroImage from "@/assets/hero_image.png";
 
 const Home = () => {
   return (
@@ -13,7 +15,10 @@ const Home = () => {
       <section className="w-full py-12 md:py-24 lg:py-32 animated-bg relative overflow-hidden">
         {/* Animated blobs */}
         <div className="blob" style={{ top: "30%", left: "20%" }}></div>
-        <div className="blob" style={{ top: "60%", left: "70%", animationDelay: "-5s" }}></div>
+        <div
+          className="blob"
+          style={{ top: "60%", left: "70%", animationDelay: "-5s" }}
+        ></div>
 
         <div className="container px-4 md:px-6 relative">
           <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
@@ -26,20 +31,21 @@ const Home = () => {
                   className="max-w-[600px] text-muted-foreground md:text-xl animate-slide-up"
                   style={{ animationDelay: "0.2s" }}
                 >
-                  Discover courses taught by industry experts and expand your knowledge from anywhere, anytime.
+                  Discover courses taught by industry experts and expand your
+                  knowledge from anywhere, anytime.
                 </p>
               </div>
               <div
                 className="flex flex-col gap-2 min-[400px]:flex-row animate-slide-up"
                 style={{ animationDelay: "0.4s" }}
               >
-                <Link href="/courses">
+                <Link to="/courses">
                   <Button size="lg" className="rounded-full btn-pulse">
                     Browse Courses
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/register">
+                <Link to="/register">
                   <Button variant="outline" size="lg" className="rounded-full">
                     Sign Up Free
                   </Button>
@@ -49,8 +55,8 @@ const Home = () => {
             <div className="flex items-center justify-center animate-float">
               <img
                 alt="Hero Image"
-                className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full lg:order-last shadow-xl"
-                src="https://cdn.pixabay.com/photo/2024/05/26/10/15/bird-8788491_1280.jpg"
+                className="mx-auto aspect-video overflow-hidden rounded-xl object-center sm:w-full lg:order-last shadow-xl"
+                src={heroImage}
               />
             </div>
           </div>
@@ -68,9 +74,12 @@ const Home = () => {
               >
                 Features
               </div>
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl gradient-heading">Why Choose EduLearn?</h2>
+              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl gradient-heading">
+                Why Choose EduLearn?
+              </h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Our platform offers a comprehensive learning experience with features designed to help you succeed.
+                Our platform offers a comprehensive learning experience with
+                features designed to help you succeed.
               </p>
             </div>
           </div>
@@ -79,22 +88,26 @@ const Home = () => {
               {
                 icon: BookOpen,
                 title: "Expert-Led Courses",
-                description: "Learn from industry professionals with real-world experience.",
+                description:
+                  "Learn from industry professionals with real-world experience.",
               },
               {
                 icon: Users,
                 title: "Community Support",
-                description: "Connect with peers and instructors for guidance and collaboration.",
+                description:
+                  "Connect with peers and instructors for guidance and collaboration.",
               },
               {
                 icon: Award,
                 title: "Certificates",
-                description: "Earn recognized certificates to showcase your achievements.",
+                description:
+                  "Earn recognized certificates to showcase your achievements.",
               },
               {
                 icon: CheckCircle,
                 title: "Flexible Learning",
-                description: "Study at your own pace with lifetime access to course materials.",
+                description:
+                  "Study at your own pace with lifetime access to course materials.",
               },
             ].map((feature, index) => (
               <Card
@@ -107,7 +120,9 @@ const Home = () => {
                     <feature.icon className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-bold">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-2">{feature.description}</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {feature.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -143,13 +158,13 @@ const Home = () => {
               className="flex flex-col gap-2 min-[400px]:flex-row animate-slide-up"
               style={{ animationDelay: "0.4s" }}
             >
-              <Link href="/courses">
+              <Link to="/courses">
                 <Button size="lg" className="rounded-full btn-pulse">
                   Explore Courses
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/register">
+              <Link to="/register">
                 <Button variant="outline" size="lg" className="rounded-full">
                   Sign Up Free
                 </Button>
@@ -159,7 +174,7 @@ const Home = () => {
         </div>
       </section>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

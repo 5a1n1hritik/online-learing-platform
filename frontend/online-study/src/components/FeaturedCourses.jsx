@@ -17,7 +17,8 @@ const featuredCourses = [
     duration: "8 weeks",
     rating: 4.8,
     students: 1245,
-    image: "https://image.lexica.art/full_webp/062926f4-df98-4625-a661-b7bca81b67ff",
+    imageUrl:
+      "https://image.lexica.art/full_webp/062926f4-df98-4625-a661-b7bca81b67ff",
   },
   {
     id: "2",
@@ -29,7 +30,7 @@ const featuredCourses = [
     duration: "10 weeks",
     rating: 4.7,
     students: 982,
-    image: "https://i.ytimg.com/vi/SVVYvHRxQzI/hqdefault.jpg",
+    imageUrl: "https://i.ytimg.com/vi/SVVYvHRxQzI/hqdefault.jpg",
   },
   {
     id: "3",
@@ -41,7 +42,8 @@ const featuredCourses = [
     duration: "6 weeks",
     rating: 4.9,
     students: 756,
-    image: "https://askusedu.com/blogdashboard/wp-content/uploads/2024/07/how-to-prepare-for-upsc.webp",
+    imageUrl:
+      "https://askusedu.com/blogdashboard/wp-content/uploads/2024/07/how-to-prepare-for-upsc.webp",
   },
 ];
 
@@ -72,7 +74,7 @@ const FeaturedCourses = () => {
           className="flex justify-center mt-8 animate-fade-in"
           style={{ animationDelay: "0.6s" }}
         >
-          <Link href="/courses">
+          <Link to="/courses">
             <Button variant="outline" className="rounded-full shimmer">
               View All Courses
               <ArrowRight className="ml-2 h-4 w-4" />
