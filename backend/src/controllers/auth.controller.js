@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -22,7 +22,7 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role: "STUDENT" },
+      data: { name, email, password: hashedPassword, role: Role.STUDENT },
     });
 
     res.status(201).json({
@@ -37,6 +37,9 @@ export const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    if (error.code === "P2002") {
+      return res.status(400).json({ message: "Email already registered" });
+    }
     if (error.name === "ZodError") {
       return res.status(400).json({ message: error.errors[0].message });
     }
@@ -70,6 +73,15 @@ export const loginUser = async (req, res) => {
       { expiresIn: "7d" }
     ); // long
 
+    // Save refresh token in database (optional)
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
     // Set Refresh Token in HttpOnly Secure Cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -98,12 +110,23 @@ export const loginUser = async (req, res) => {
   }
 };
 
-export const refreshAccessToken = (req, res) => {
+export const refreshAccessToken = async (req, res) => {
   const token = req.cookies.refreshToken;
   if (!token) return res.status(401).json({ message: "Refresh token missing" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    // Check if token exists in DB
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token },
+    });
+
+    if (!storedToken || new Date(storedToken.expiresAt) < new Date()) {
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
+    }
 
     const newAccessToken = jwt.sign(
       { id: decoded.id, role: decoded.role, email: decoded.email },
@@ -121,29 +144,50 @@ export const refreshAccessToken = (req, res) => {
   }
 };
 
-export const logoutUser = (req, res) => {
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-  });
-  res.status(200).json({ message: "Logged out successfully" });
+export const logoutUser = async (req, res) => {
+  const token = req.cookies.refreshToken;
+  try {
+    if (token) {
+      await prisma.refreshToken.deleteMany({ where: { token } });
+    }
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+    });
+
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error during logout" });
+  }
 };
 
 export const getProfile = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        bio: true,
+        // Optionally, include related counts or summaries if needed:
+        // courses: true,
+        // quizSubmissions: { select: { id: true } },
+      },
+    });
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
+
+    res.status(200).json({ user });
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching profile:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
