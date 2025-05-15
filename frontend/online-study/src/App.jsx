@@ -9,6 +9,7 @@ import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import Courses from "./page/Courses";
 import CourseDetails from "./page/CourseDetails";
+import CourseQuiz from "./components/CourseQuiz";
 
 function App() {
   const location = useLocation();
@@ -26,6 +27,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
+        <Route path="//courses/:id/quiz/:id" element={<CourseQuiz/>} />
       </Routes>
 
       {!isAdminDashboard && <Footer />}

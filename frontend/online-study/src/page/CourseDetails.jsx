@@ -21,6 +21,94 @@ import { Separator } from "@/components/ui/separator";
 import VideoPlayer from "@/components/VideoPlayer.jsx";
 import EnrollButton from "@/components/EnrollButton.jsx";
 
+const courseDetails = {
+  id: "1",
+  title: "Web Development Fundamentals",
+  description:
+    "Learn the core concepts of HTML, CSS, and JavaScript to build modern websites from scratch. This comprehensive course will take you from a complete beginner to being able to create your own responsive websites.",
+  instructor: {
+    name: "Sarah Johnson",
+    bio: "Senior Web Developer with over 10 years of experience. Previously worked at Google and Facebook.",
+    avatar: "/placeholder.svg?height=100&width=100",
+  },
+  level: "Beginner",
+  duration: "8 weeks",
+  rating: 4.8,
+  students: 1245,
+  image: "/placeholder.svg?height=400&width=800",
+  price: "$49.99",
+  isFree: false,
+  modules: [
+    {
+      id: "m1",
+      title: "Introduction to HTML",
+      progress: 100,
+      lessons: [
+        { id: "l1", title: "HTML Basics", duration: "15 min", isPreview: true, completed: true },
+        { id: "l2", title: "HTML Elements & Attributes", duration: "20 min", isPreview: false, completed: true },
+        { id: "l3", title: "HTML Forms", duration: "25 min", isPreview: false, completed: true },
+      ],
+    },
+    {
+      id: "m2",
+      title: "CSS Fundamentals",
+      progress: 66,
+      lessons: [
+        { id: "l4", title: "CSS Syntax", duration: "18 min", isPreview: false, completed: true },
+        { id: "l5", title: "CSS Selectors", duration: "22 min", isPreview: false, completed: true },
+        { id: "l6", title: "CSS Box Model", duration: "30 min", isPreview: false, completed: false },
+      ],
+    },
+    {
+      id: "m3",
+      title: "JavaScript Basics",
+      progress: 0,
+      lessons: [
+        { id: "l7", title: "JavaScript Variables", duration: "20 min", isPreview: false, completed: false },
+        { id: "l8", title: "JavaScript Functions", duration: "25 min", isPreview: false, completed: false },
+        { id: "l9", title: "DOM Manipulation", duration: "35 min", isPreview: false, completed: false },
+      ],
+    },
+  ],
+  quizzes: [
+    {
+      id: "quiz-1",
+      title: "HTML & CSS Fundamentals Quiz",
+      questions: 5,
+      timeLimit: 15,
+      completed: false,
+    },
+    {
+      id: "quiz-2",
+      title: "JavaScript Basics Quiz",
+      questions: 10,
+      timeLimit: 20,
+      completed: false,
+    },
+  ],
+  exams: [
+    {
+      id: "exam-1",
+      title: "Web Development Final Exam",
+      questions: 20,
+      timeLimit: 60,
+      completed: false,
+    },
+  ],
+  whatYouWillLearn: [
+    "Build responsive websites using HTML, CSS, and JavaScript",
+    "Understand core web development concepts",
+    "Create interactive user interfaces",
+    "Implement modern design principles",
+    "Deploy websites to production",
+  ],
+  requirements: [
+    "No prior programming experience required",
+    "Basic computer skills",
+    "A computer with internet access",
+  ],
+}
+
 const CourseDetails = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -298,7 +386,7 @@ const CourseDetails = () => {
                 </div>
               </div>
               <div className="space-y-4">
-                {course?.modules?.map((module) => (
+                {courseDetails?.modules.map((module, index) => (
                   <Card
                     key={module.id}
                     className="overflow-hidden border-none shadow-md animate-fade-in"
@@ -377,7 +465,7 @@ const CourseDetails = () => {
                   What You'll Learn
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {course?.whatYouWillLearn?.map((item, index) => (
+                  {courseDetails?.whatYouWillLearn?.map((item, index) => (
                     <div
                       key={index}
                       className="flex items-start gap-2 animate-fade-in"
@@ -395,7 +483,7 @@ const CourseDetails = () => {
                   Requirements
                 </h2>
                 <ul className="list-disc pl-5 space-y-2">
-                  {course?.requirements?.map((req, index) => (
+                  {courseDetails?.requirements?.map((req, index) => (
                     <li
                       key={index}
                       className="animate-fade-in text-xs sm:text-sm"
@@ -422,7 +510,7 @@ const CourseDetails = () => {
                   Quizzes
                 </h2>
                 <div className="grid gap-4">
-                  {course?.quizzes?.map((quiz, index) => (
+                  {courseDetails?.quizzes?.map((quiz, index) => (
                     <Card
                       key={quiz.id}
                       className="overflow-hidden border-none shadow-md animate-fade-in"
@@ -442,7 +530,7 @@ const CourseDetails = () => {
                               minutes
                             </p>
                           </div>
-                          <Link to={`/courses/${params.id}/quiz/${quiz.id}`}>
+                          <Link to={`/courses/${id}/quiz/${quiz.id}`}>
                             <Button
                               variant={quiz.completed ? "outline" : "default"}
                               className="w-full sm:w-auto rounded-full shimmer text-xs sm:text-sm h-8 sm:h-9"
@@ -462,7 +550,7 @@ const CourseDetails = () => {
                   Exams
                 </h2>
                 <div className="grid gap-4">
-                  {course?.exams?.map((exam, index) => (
+                  {courseDetails?.exams?.map((exam, index) => (
                     <Card
                       key={exam.id}
                       className="overflow-hidden border-none shadow-md animate-fade-in"
@@ -482,7 +570,7 @@ const CourseDetails = () => {
                               minutes
                             </p>
                           </div>
-                          <Link to={`/courses/${params.id}/exam/${exam.id}`}>
+                          <Link to={`/courses/${id}/exam/${exam.id}`}>
                             <Button
                               variant={exam.completed ? "outline" : "default"}
                               className="w-full sm:w-auto rounded-full shimmer text-xs sm:text-sm h-8 sm:h-9"
@@ -525,7 +613,7 @@ const CourseDetails = () => {
                       : "Unknown Instructor"}
                   </h2>
                   <p className="text-muted-foreground text-xs sm:text-sm mt-2 text-center sm:text-left">
-                    {course.instructor?.bio}
+                    {courseDetails.instructor?.bio}
                   </p>
                 </div>
               </div>
