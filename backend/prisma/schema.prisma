@@ -64,9 +64,19 @@ model User {
   activityStats     UserActivityStats?
   resetToken        String?
   resetTokenExpiry  DateTime?
+  refreshTokens     RefreshToken[]
   CourseProgress    CourseProgress[]
   CourseReview      CourseReview[]
   LessonProgress    LessonProgress[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Category {
@@ -85,7 +95,7 @@ model Course {
   rating         Float            @default(0)
   studentsCount  Int              @default(0) // Update this from backend logic on enroll/unenroll
   level          CourseLevel      @default(BEGINNER)
-  duration Int @default(0)
+  duration       Int              @default(0)
   instructor     User             @relation("UserToCourses", fields: [instructorId], references: [id], onDelete: Cascade)
   instructorId   Int
   category       Category?        @relation(fields: [categoryId], references: [id])
@@ -174,22 +184,25 @@ model Quiz {
 }
 
 model QuizQuestion {
-  id         Int          @id @default(autoincrement())
-  question   String
-  options    QuizOption[]
-  difficulty Difficulty   @default(MEDIUM)
-  quiz       Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  quizId     Int
-  QuizAnswer QuizAnswer[]
+  id          Int          @id @default(autoincrement())
+  question_en String
+  question_hi String
+  options     QuizOption[]
+  difficulty  Difficulty   @default(MEDIUM)
+  quiz        Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      Int
+  QuizAnswer  QuizAnswer[]
 }
 
 model QuizOption {
   id             Int          @id @default(autoincrement())
   label          OptionLabel
-  text           String
+  text_en        String
+  text_hi        String
   isCorrect      Boolean      @default(false)
   quizQuestion   QuizQuestion @relation(fields: [quizQuestionId], references: [id], onDelete: Cascade)
   quizQuestionId Int
+  answers        QuizAnswer[] @relation("QuizOptionToAnswers")
 }
 
 model QuizSubmission {
@@ -205,13 +218,14 @@ model QuizSubmission {
 }
 
 model QuizAnswer {
-  id             Int            @id @default(autoincrement())
-  submission     QuizSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  submissionId   Int
-  question       QuizQuestion   @relation(fields: [questionId], references: [id])
-  questionId     Int
-  selectedOption Int // QuizOption.id
-  isCorrect      Boolean
+  id               Int            @id @default(autoincrement())
+  submission       QuizSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId     Int
+  question         QuizQuestion   @relation(fields: [questionId], references: [id])
+  questionId       Int
+  selectedOptionId Int
+  selectedOption   QuizOption     @relation("QuizOptionToAnswers", fields: [selectedOptionId], references: [id])
+  isCorrect        Boolean
 }
 
 model Exam {
@@ -228,19 +242,21 @@ model Exam {
 }
 
 model ExamQuestion {
-  id         Int          @id @default(autoincrement())
-  question   String
-  options    ExamOption[]
-  difficulty Difficulty   @default(MEDIUM)
-  exam       Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
-  examId     Int
-  ExamAnswer ExamAnswer[]
+  id          Int          @id @default(autoincrement())
+  question_en String
+  question_hi String
+  options     ExamOption[]
+  difficulty  Difficulty   @default(MEDIUM)
+  exam        Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId      Int
+  ExamAnswer  ExamAnswer[]
 }
 
 model ExamOption {
   id             Int          @id @default(autoincrement())
   label          OptionLabel
-  text           String
+  text_en        String
+  text_hi        String
   isCorrect      Boolean      @default(false)
   examQuestion   ExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
   examQuestionId Int

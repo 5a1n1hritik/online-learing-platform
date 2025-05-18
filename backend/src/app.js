@@ -5,7 +5,9 @@ import cookieParser from "cookie-parser";
 import csurf from "csurf";
 
 import authRoutes from "./routes/authRoutes.js";
-import courseRoutes from './routes/courseRoutes.js';
+import courseRoutes from "./routes/courseRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import quizRoutes from "./routes/quizRoutes.js";
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ app.use(express.json());
 // });
 
 app.use("/api/auth", authRoutes);
-app.use('/api/courses', courseRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/category", categoryRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 export default app;

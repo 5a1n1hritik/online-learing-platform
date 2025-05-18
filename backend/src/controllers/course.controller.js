@@ -1,13 +1,22 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
 export const createCourse = async (req, res) => {
-  const { title, description, price, imageUrl } = req.body;
-  const userId = req.user.id;
-
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const {
+      title,
+      description,
+      price,
+      isFree,
+      imageUrl,
+      level,
+      duration,
+      categoryId,
+    } = req.body;
+
+    const instructorId = req.user.id;
+
+    const user = await prisma.user.findUnique({ where: { id: instructorId } });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -19,7 +28,16 @@ export const createCourse = async (req, res) => {
         .json({ message: "Only instructors or admins can create courses" });
     }
 
-    if (!title || !description || !price || !imageUrl) {
+    if (
+      !title ||
+      !description ||
+      price === undefined ||
+      isFree === undefined ||
+      !imageUrl ||
+      !level ||
+      duration === undefined ||
+      categoryId === undefined
+    ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -29,35 +47,86 @@ export const createCourse = async (req, res) => {
         description,
         price: parseFloat(price),
         imageUrl,
-        instructorId: userId,
+        isFree,
+        level,
+        duration,
+        instructorId: instructorId,
+        categoryId: parseInt(categoryId),
       },
     });
 
     res.status(200).json({
+      success: true,
       message: "Course created successfully",
-      course,
+      data: course,
     });
   } catch (error) {
     console.error("Error creating course:", error);
-    res.status(500).json({ message: "Server error while creating course" });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error while creating course" });
   }
 };
 
 export const getAllCourses = async (req, res) => {
   try {
+    // Destructure and sanitize query parameters
+    const {
+      search = "",
+      level,
+      categoryId,
+      isFree,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const parsedCategoryId = categoryId ? parseInt(categoryId) : undefined;
+    const parsedIsFree = isFree !== undefined ? isFree === "true" : undefined;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Build filters object
+    const filters = {
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+        ],
+      }),
+      ...(level && { level }),
+      ...(parsedCategoryId && { categoryId: parsedCategoryId }),
+      ...(parsedIsFree !== undefined && { isFree: parsedIsFree }),
+    };
+
+    // Fetch filtered courses
     const courses = await prisma.course.findMany({
-      include: { instructor: { select: { name: true } } },
+      where: filters,
+      include: {
+        instructor: { select: { name: true } },
+        category: true,
+        CourseReview: true,
+        enrollments: true,
+        lessons: true,
+        quizzes: true,
+        exams: true,
+        CourseProgress: true,
+      },
+      skip: 0,
+      take: 10,
+      orderBy: { createdAt: "desc" },
     });
 
-    if (!courses || courses.length === 0) {
-      return res.status(404).json({ message: "No courses found" });
-    }
+    // Count total for pagination
+    const totalCourses = await prisma.course.count({ where: filters });
 
     res.status(200).json({
-      message: "All courses fetched successfully",
-      courses,
+      success: true,
+      message: "Courses fetched successfully",
+      total: totalCourses,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      data: courses,
     });
-
   } catch (error) {
     console.error("Error fetching courses:", error);
     res.status(500).json({ message: "Server error while fetching courses" });
@@ -65,109 +134,153 @@ export const getAllCourses = async (req, res) => {
 };
 
 export const getCourseDetails = async (req, res) => {
-  const { id } = req.params;
   try {
-    const course = await prisma.course.findUnique({
-      where: { id: parseInt(id) },
-      include: { instructor: { select: { name: true } } },
-    });
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+    const courseId = parseInt(req.params.id);
+
+    if (isNaN(courseId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course ID",
+      });
     }
+
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        instructor: { select: { name: true, bio: true, avatarUrl: true } },
+        CourseReview: {
+          include: {
+            user: {
+              select: { name: true, email: true, avatarUrl: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
     res.status(200).json({
+      success: true,
       message: "Course details fetched successfully",
-      course,
+      data: course,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching course details", error });
+    console.error("Error fetching course details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching course details",
+      error: error.message,
+    });
   }
 };
 
 export const updateCourse = async (req, res) => {
-  const { id } = req.params;
-  const { title, description, price, imageUrl } = req.body;
-  const userId = req.user.id;
+  const courseId = req.params.id;
+  const instructorId = req.user.id;
+
+  // const { title, description, price, imageUrl } = req.body;
 
   try {
     const course = await prisma.course.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: courseId },
     });
+
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
 
     if (
-      course.instructorId !== userId &&
+      course.instructorId !== instructorId &&
       req.user.role !== "ADMIN" &&
       req.user.role !== "INSTRUCTOR"
     ) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to update this course" });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to update this course",
+      });
     }
 
     const updatedCourse = await prisma.course.update({
-      where: { id: parseInt(id) },
-      data: {
-        title,
-        description,
-        price: parseFloat(price),
-        imageUrl,
-      },
+      where: { id: courseId },
+      data: req.body,
     });
 
     res.status(200).json({
+      success: true,
       message: "Course updated successfully",
       updatedCourse,
     });
   } catch (error) {
     console.error("Error updating course:", error);
-    res.status(500).json({ message: "Server error while updating course" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating course",
+    });
   }
 };
 
 export const deleteCourse = async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-
   try {
+    const courseId = parseInt(req.params.id);
+    const instructorId = req.user.id;
+
+    if (isNaN(courseId)) {
+      return res.status(400).json({ message: "Invalid course ID format" });
+    }
+
     const course = await prisma.course.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: courseId },
     });
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
 
     if (
-      course.instructorId !== userId &&
+      course.instructorId !== instructorId &&
       req.user.role !== "ADMIN" &&
       req.user.role !== "INSTRUCTOR"
     ) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to delete this course" });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to delete this course",
+      });
     }
 
-    await prisma.course.delete({ where: { id: parseInt(id) } });
-    res.status(200).json({ message: "Course deleted successfully" });
+    await prisma.course.delete({ where: { id: courseId } });
+    res.status(200).json({
+      success: true,
+      message: "Course deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting course:", error);
-    res.status(500).json({ message: "Server error while deleting course" });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error while deleting course" });
   }
 };
 
 export const enrollInCourse = async (req, res) => {
-  const courseId = parseInt(req.params.id);
-  const userId = req.user.id;
-
-  if (!courseId) {
-    return res.status(400).json({ message: "Invalid course ID" });
-  }
-  if (!userId) {
-    return res.status(400).json({ message: "Invalid user" });
-  }
-
   try {
+    const courseId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    if (isNaN(courseId)) {
+      return res.status(400).json({ message: "Invalid course ID format" });
+    }
+
+    if (!courseId) {
+      return res.status(400).json({ message: "Invalid course ID" });
+    }
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user" });
+    }
+
     const course = await prisma.course.findUnique({
       where: { id: courseId },
     });
@@ -188,7 +301,7 @@ export const enrollInCourse = async (req, res) => {
     if (alreadyEnrolled) {
       return res
         .status(400)
-        .json({ message: "Already enrolled in this course" });
+        .json({ success: false, message: "Already enrolled in this course" });
     }
 
     // Check if the user is an instructor or admin
@@ -197,24 +310,99 @@ export const enrollInCourse = async (req, res) => {
     });
 
     if (user.role === "INSTRUCTOR" || user.role === "ADMIN") {
-      return res
-        .status(403)
-        .json({ message: "Instructors and admins cannot enroll in courses" });
+      return res.status(403).json({
+        success: false,
+        message: "Instructors and admins cannot enroll in courses",
+      });
     }
 
     const enrollment = await prisma.enrollment.create({
       data: {
-        userId,
-        courseId,
+        user: {
+          connect: { id: userId },
+        },
+        course: {
+          connect: { id: courseId },
+        },
       },
     });
 
-    res
-      .status(200)
-      .json({ message: "Enrolled in course successfully", enrollment });
+    // Update student count
+    await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        studentsCount: { increment: 1 },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Enrolled in course successfully",
+      data: enrollment,
+    });
   } catch (error) {
     console.error("Error enrolling in course:", error);
-    res.status(500).json({ message: "Server error while enrolling in course" });
+    res.status(500).json({
+      success: false,
+      message: "Server error while enrolling in course",
+    });
+  }
+};
+
+export const unenrollFromCourse = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    if (!courseId) {
+      return res.status(400).json({ message: "Invalid course ID" });
+    }
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user" });
+    }
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (!enrollment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Enrollment not found" });
+    }
+
+    await prisma.enrollment.delete({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    // Update student count
+    await prisma.course.update({
+      where: { id: courseId },
+      data: {
+        studentsCount: { decrement: 1 },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Unenrolled from course successfully",
+    });
+  } catch (error) {
+    console.error("Error unenrolling from course:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while unenrolling from course",
+    });
   }
 };
 
@@ -374,5 +562,219 @@ export const getInstructorCoursesById = async (req, res) => {
     res
       .status(500)
       .json({ message: "Server error while fetching instructor course" });
+  }
+};
+
+export const submitReview = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id);
+    const userId = req.user.id;
+    const { rating, comment } = req.body;
+    if (!courseId) {
+      return res.status(400).json({ message: "Invalid course ID" });
+    }
+    if (!userId) {
+      return res.status(400).json({ message: "Invalid user" });
+    }
+    if (!rating || !comment) {
+      return res
+        .status(400)
+        .json({ message: "Rating and comment are required" });
+    }
+    if (rating < 1 || rating > 5) {
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 1 and 5" });
+    }
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+    });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    const alreadyReviewed = await prisma.courseReview.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+    if (alreadyReviewed) {
+      return res
+        .status(400)
+        .json({ message: "You have already reviewed this course" });
+    }
+
+    const review = await prisma.courseReview.upsert({
+      where: {
+        userId_courseId: { userId: req.user.id, courseId },
+      },
+      update: { rating, comment },
+      create: {
+        userId: req.user.id,
+        courseId,
+        rating,
+        comment,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Review summit successfully",
+      data: review,
+    });
+  } catch (err) {
+    console.error("Error submitting review:", err);
+    if (err.code === "P2002") {
+      return res.status(400).json({ message: "Review already exists" });
+    }
+    if (err.name === "ZodError") {
+      return res.status(400).json({ message: err.errors[0].message });
+    }
+    res.status(500).json({ error: "Failed to submit review" });
+  }
+};
+
+export const getCourseReview = async (req, res) => {
+  const courseId = parseInt(req.params.id);
+  const userId = req.user.id;
+
+  if (!courseId) {
+    return res.status(400).json({ message: "Invalid course ID" });
+  }
+  if (!userId) {
+    return res.status(400).json({ message: "Invalid user" });
+  }
+
+  try {
+    const review = await prisma.courseReview.findUnique({
+      where: {
+        userId_courseId: { userId, courseId },
+      },
+    });
+
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    res.status(200).json({
+      message: "Course review fetched successfully",
+      review,
+    });
+  } catch (error) {
+    console.error("Error fetching course review:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while fetching course review" });
+  }
+};
+
+export const deleteCourseReview = async (req, res) => {
+  const courseId = parseInt(req.params.id);
+  const userId = req.user.id;
+
+  if (!courseId) {
+    return res.status(400).json({ message: "Invalid course ID" });
+  }
+  if (!userId) {
+    return res.status(400).json({ message: "Invalid user" });
+  }
+
+  try {
+    const review = await prisma.courseReview.delete({
+      where: {
+        userId_courseId: { userId, courseId },
+      },
+    });
+
+    res.status(200).json({
+      message: "Course review deleted successfully",
+      review,
+    });
+  } catch (error) {
+    console.error("Error deleting course review:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while deleting course review" });
+  }
+};
+
+export const getCourseProgress = async (req, res) => {
+  const courseId = req.params.id;
+  const userId = req.user.id;
+
+  if (!courseId) {
+    return res.status(400).json({ message: "Invalid course ID" });
+  }
+  if (!userId) {
+    return res.status(400).json({ message: "Invalid user" });
+  }
+
+  try {
+    const progress = await prisma.courseProgress.findUnique({
+      where: {
+        userId_courseId: { userId, courseId },
+      },
+    });
+
+    if (!progress) {
+      return res.status(404).json({ message: "Progress not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Course progress fetched successfully",
+      data: progress || {},
+    });
+  } catch (error) {
+    console.error("Error fetching course progress:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching course progress",
+    });
+  }
+};
+
+export const updateCourseProgress = async (req, res) => {
+  const courseId = req.params.id;
+  const userId = req.user.id;
+  const { progressPercent, completedLessons } = req.body;
+
+  if (!courseId) {
+    return res.status(400).json({ message: "Invalid course ID" });
+  }
+  if (!userId) {
+    return res.status(400).json({ message: "Invalid user" });
+  }
+  if (progress < 0 || progress > 100) {
+    return res
+      .status(400)
+      .json({ message: "Progress must be between 0 and 100" });
+  }
+
+  try {
+    const updatedProgress = await prisma.courseProgress.upsert({
+      where: {
+        userId_courseId: { userId, courseId },
+      },
+      update: { progressPercent, completedLessons },
+      create: {
+        userId,
+        courseId,
+        progressPercent,
+        completedLessons,
+      },
+    });
+
+    res.status(200).json({
+      message: "Course progress updated successfully",
+      updatedProgress,
+    });
+  } catch (error) {
+    console.error("Error updating course progress:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while updating course progress" });
   }
 };

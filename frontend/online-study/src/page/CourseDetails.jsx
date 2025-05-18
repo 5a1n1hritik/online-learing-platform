@@ -117,9 +117,9 @@ const CourseDetails = () => {
   useEffect(() => {
     const fetchCourseDetails = async () => {
       try {
-        const response = await API.get(`/courses/${id}/`);
-        setCourse(response.data.course);
-        // console.log(response.data.course);
+        const response = await API.get(`/courses/${id}`);
+        setCourse(response.data.data);
+        console.log(response.data.data);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -273,7 +273,7 @@ const CourseDetails = () => {
                   <div>
                     <p className="text-xs sm:text-sm font-medium">Enrolled</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      {course?.students?.toLocaleString()} students
+                      {course?.studentsCount?.toLocaleString()} students
                     </p>
                   </div>
                 </div>

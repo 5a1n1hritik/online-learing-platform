@@ -55,7 +55,8 @@ const Courses = () => {
     const fetchCourses = async () => {
       try {
         const response = await API.get("/courses/all-courses");
-        setCourses(response.data.courses);
+        setCourses(response.data.data);
+        console.log(response.data.data);
       } catch (error) {
         setError(error.message);
       } finally {
