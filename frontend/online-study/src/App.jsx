@@ -27,7 +27,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
-        <Route path="//courses/:id/quiz/:id" element={<CourseQuiz/>} />
+        <Route path="/courses/:courseId/quiz/:quizId" element={<CourseQuiz />} />
       </Routes>
 
       {!isAdminDashboard && <Footer />}

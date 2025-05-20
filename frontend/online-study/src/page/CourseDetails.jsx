@@ -110,16 +110,21 @@ const courseDetails = {
 }
 
 const CourseDetails = () => {
-  const { id } = useParams();
+  const { id: courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [quizzes, setQuizzes] = useState([]);
+  // const [exams, setExams] = useState([]);
+  const [quizLoading, setQuizLoading] = useState(true);
+  const [quizError, setQuizError] = useState(null);
+
   useEffect(() => {
     const fetchCourseDetails = async () => {
       try {
-        const response = await API.get(`/courses/${id}`);
+        const response = await API.get(`/courses/${courseId}`);
         setCourse(response.data.data);
-        console.log(response.data.data);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -128,7 +133,36 @@ const CourseDetails = () => {
     };
 
     fetchCourseDetails();
-  }, [id]);
+  }, [courseId]);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        const response = await API.get(`/quizzes/course/${courseId}`);
+        setQuizzes(response.data.quiz);
+      } catch (error) {
+        setQuizError(error.message);
+      } finally {
+        setQuizLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, [courseId]);
+
+  // useEffect(() => {
+  //   const fetchExams = async () => {
+  //     try {
+  //       const response = await API.get(`/exams/course/${courseId}`);
+  //       setExams(response.data.data);
+  //       console.log(response.data.data);
+  //     } catch (error) {
+  //       setQuizError(error.message);
+  //     } finally {
+  //       setQuizLoading(false);
+  //     }
+  //   };
+  //   fetchExams();
+  // }, [courseId]);
 
   const formatPriceINR = (price) => {
     return new Intl.NumberFormat("en-IN", {
@@ -510,7 +544,7 @@ const CourseDetails = () => {
                   Quizzes
                 </h2>
                 <div className="grid gap-4">
-                  {courseDetails?.quizzes?.map((quiz, index) => (
+                  {quizzes?.map((quiz, index) => (
                     <Card
                       key={quiz.id}
                       className="overflow-hidden border-none shadow-md animate-fade-in"
@@ -530,7 +564,7 @@ const CourseDetails = () => {
                               minutes
                             </p>
                           </div>
-                          <Link to={`/courses/${id}/quiz/${quiz.id}`}>
+                          <Link to={`/courses/${courseId}/quiz/${quiz.id}`}>
                             <Button
                               variant={quiz.completed ? "outline" : "default"}
                               className="w-full sm:w-auto rounded-full shimmer text-xs sm:text-sm h-8 sm:h-9"
@@ -570,7 +604,7 @@ const CourseDetails = () => {
                               minutes
                             </p>
                           </div>
-                          <Link to={`/courses/${id}/exam/${exam.id}`}>
+                          <Link to={`/courses/${courseId}/exam/${exam.id}`}>
                             <Button
                               variant={exam.completed ? "outline" : "default"}
                               className="w-full sm:w-auto rounded-full shimmer text-xs sm:text-sm h-8 sm:h-9"

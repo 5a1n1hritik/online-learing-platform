@@ -171,7 +171,8 @@ export const getQuizByCourse = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      quizzes,
+      message: "Quizzes fetched successfully",
+      quiz: quizzes,
     });
   } catch (error) {
     console.error("Error fetching quizzes:", error);
@@ -259,7 +260,11 @@ export const getQuizQuestions = async (req, res) => {
       })),
     }));
 
-    res.status(200).json(localizedQuestions);
+    res.status(200).json({
+      success: true,
+      message: "Quiz questions fetched successfully",
+      questions: localizedQuestions,
+    });
   } catch (error) {
     console.error("Get Quiz Questions Error:", error);
     res.status(500).json({ error: "Failed to fetch quiz questions" });
