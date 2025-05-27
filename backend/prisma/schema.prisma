@@ -98,9 +98,10 @@ model Course {
   duration       Int              @default(0)
   instructor     User             @relation("UserToCourses", fields: [instructorId], references: [id], onDelete: Cascade)
   instructorId   Int
-  category       Category?        @relation(fields: [categoryId], references: [id])
-  categoryId     Int?
+  category       Category        @relation(fields: [categoryId], references: [id])
+  categoryId     Int
   enrollments    Enrollment[]
+  contents       CourseContent[]
   lessons        Lesson[]
   quizzes        Quiz[]
   exams          Exam[]
@@ -108,6 +109,17 @@ model Course {
   updatedAt      DateTime         @updatedAt
   CourseProgress CourseProgress[]
   CourseReview   CourseReview[]
+}
+
+model CourseContent {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  videoUrl    String
+  materialUrl String?   // optional PDF
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId    Int
+  createdAt   DateTime  @default(now())
 }
 
 model CourseProgress {
@@ -147,14 +159,18 @@ model Enrollment {
 model Lesson {
   id             Int              @id @default(autoincrement())
   title          String
-  description    String
-  videoUrl       String?
-  materialUrl    String?
+  description    String?
+  videoUrl       String?          // for VIDEO
+  materialUrl    String?          // for ARTICLE or PDF
+  quizId         Int?             // optional, for QUIZ
+  examId         Int?             // optional, for EXAM
   order          Int              @default(0)
   duration       Int              @default(0) // minutes
-  type           LessonType       @default(VIDEO)
+  type           LessonType       @default(PDF)
   course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   courseId       Int
+  quiz           Quiz?            @relation(fields: [quizId], references: [id])
+  exam           Exam?            @relation(fields: [examId], references: [id])
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   LessonProgress LessonProgress[]
@@ -179,6 +195,7 @@ model Quiz {
   courseId     Int
   questions    QuizQuestion[]
   submissions  QuizSubmission[]
+  lessons      Lesson[] // add this if back reference is needed
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 }
@@ -237,6 +254,7 @@ model Exam {
   courseId     Int
   questions    ExamQuestion[]
   submissions  ExamSubmission[]
+  lessons      Lesson[] // add this if back reference is needed
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 }

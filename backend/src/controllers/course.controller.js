@@ -111,8 +111,8 @@ export const getAllCourses = async (req, res) => {
         exams: true,
         CourseProgress: true,
       },
-      skip: 0,
-      take: 10,
+      skip,
+      take,
       orderBy: { createdAt: "desc" },
     });
 
@@ -181,7 +181,7 @@ export const getCourseDetails = async (req, res) => {
 };
 
 export const updateCourse = async (req, res) => {
-  const courseId = req.params.id;
+  const courseId = parseInt(req.params.id);
   const instructorId = req.user.id;
 
   // const { title, description, price, imageUrl } = req.body;
@@ -206,9 +206,31 @@ export const updateCourse = async (req, res) => {
       });
     }
 
+    const {
+      title,
+      description,
+      price,
+      imageUrl,
+      level,
+      duration,
+      categoryId,
+      isFree,
+    } = req.body;
+
+    const updateData = {
+      ...(title && { title }),
+      ...(description && { description }),
+      ...(price !== undefined && { price: parseFloat(price) }),
+      ...(imageUrl && { imageUrl }),
+      ...(level && { level }),
+      ...(duration !== undefined && { duration }),
+      ...(categoryId !== undefined && { categoryId: parseInt(categoryId) }),
+      ...(isFree !== undefined && { isFree }),
+    };
+
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
-      data: req.body,
+      data: updateData,
     });
 
     res.status(200).json({
