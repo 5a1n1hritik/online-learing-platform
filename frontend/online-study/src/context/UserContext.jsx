@@ -18,7 +18,7 @@ export const UserProvider = ({ children }) => {
       try {
         const response = await API.get("/auth/profile");
         const data = await response.data;
-        setUser(data);
+        setUser(data.user);
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {

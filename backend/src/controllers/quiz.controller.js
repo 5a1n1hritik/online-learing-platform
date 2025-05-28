@@ -331,12 +331,12 @@ export const submitQuiz = async (req, res) => {
         userAnswers: {
           create: answerRecords.map((ans) => ({
             question: { connect: { id: ans.questionId } },
-            selectedOption: ans.selectedOption,
+            selectedOption: { connect: { id: ans.selectedOption } },  
             isCorrect: ans.isCorrect,
           })),
         },
       },
-    });
+    });    
 
     res.status(201).json({
       success: true,

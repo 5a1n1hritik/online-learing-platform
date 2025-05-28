@@ -1,7 +1,6 @@
 import API from "@/api/axios";
 import {
   AlertCircle,
-  ArrowLeft,
   CheckCircle,
   Clock,
   HelpCircle,
@@ -30,10 +29,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import ShowResult from "./ShowResult";
 
 const CourseQuiz = () => {
   const { courseId, quizId } = useParams();
-
   const [quizData, setQuizData] = useState({});
   const [questions, setQuestions] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
@@ -46,6 +45,9 @@ const CourseQuiz = () => {
   const [loading, setLoading] = useState(true);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
+
+  const allAnswered =
+    questions.length > 0 && Object.keys(answers).length === questions.length;
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -102,22 +104,67 @@ const CourseQuiz = () => {
     }));
   };
 
-  // Handle quiz submission
-  const handleSubmitQuiz = () => {
-    // Calculate score
-    let correctAnswers = 0;
-    questions.forEach((q) => {
-      if (answers[q.id] === q.correctAnswer) {
-        correctAnswers++;
-      }
-    });
+  const handleSubmitQuiz = async () => {
+    if (!allAnswered) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
 
-    const calculatedScore = Math.round(
-      (correctAnswers / questions.length) * 100
-    );
-    setScore(calculatedScore);
-    setQuizSubmitted(true);
+    try {
+      setLoading(true);
+
+      // Prepare answers array for API
+      const formattedAnswers = Object.entries(answers).map(
+        ([questionId, selectedOption]) => ({
+          questionId: parseInt(questionId),
+          selectedOption: parseInt(selectedOption),
+        })
+      );
+
+      // Calculate time taken in seconds (assuming timeLimit is in minutes)
+      const timeLimitSeconds = quizData.timeLimit * 60;
+      const timeTaken = timeLimitSeconds - timeLeft;
+
+      const response = await API.post(`/quizzes/${quizId}/submit`, {
+        timeTaken,
+        answers: formattedAnswers,
+      });
+
+      console.log("Quiz submission response:", response.data);
+
+      if (response.data.success) {
+        setScore(
+          Math.round((response.data.score / response.data.totalQuestions) * 100)
+        );
+        setQuizSubmitted(true);
+        // setShowResults(true);
+      } else {
+        alert("Failed to submit quiz: " + response.data.message);
+      }
+    } catch (error) {
+      console.error("Error submitting quiz:", error);
+      alert("An error occurred while submitting the quiz.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowResults = async () => {
+    if (!allAnswered) {
+      alert("Please answer all questions before viewing results.");
+      return;
+    }
     setShowResults(true);
+  };
+
+  const handleConfirmSubmit = () => {
+    if (!allAnswered) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
+    setConfirmSubmit(false);
+    handleSubmitQuiz();
+    handleShowResults();
   };
 
   // Format time as MM:SS
@@ -152,14 +199,6 @@ const CourseQuiz = () => {
   if (!quizStarted) {
     return (
       <div className="container max-w-4xl py-12">
-        <Link
-          to={`/courses/${courseId}`}
-          className="inline-flex items-center mb-4 text-sm font-medium text-primary"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to Course
-        </Link>
-
         <Card className="animate-fade-in">
           <CardHeader>
             <CardTitle className="text-2xl">{quizData.title}</CardTitle>
@@ -192,13 +231,31 @@ const CourseQuiz = () => {
               </AlertDescription>
             </Alert>
           </CardContent>
-          <CardFooter>
-            <Button onClick={() => setQuizStarted(true)} className="w-full">
-              Start Quiz
+          <CardFooter className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild variant="outline">
+              <Link to={`/courses/${courseId}`}>Back to Course</Link>
             </Button>
+            <Button onClick={() => setQuizStarted(true)}>Start Quiz</Button>
           </CardFooter>
         </Card>
       </div>
+    );
+  }
+
+  // Quiz results screen
+  if (showResults) {
+    return (
+      <ShowResult
+        quizId={quizId}
+        courseId={courseId}
+        setQuizStarted={setQuizStarted}
+        setQuizSubmitted={setQuizSubmitted}
+        setShowResults={setShowResults}
+        setCurrentQuestion={setCurrentQuestion}
+        setAnswers={setAnswers}
+        setTimeLeft={setTimeLeft}
+        quizData={quizData}
+      />
     );
   }
 
@@ -276,7 +333,16 @@ const CourseQuiz = () => {
             ) : (
               <Dialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
                 <DialogTrigger asChild>
-                  <Button>Submit Quiz</Button>
+                  <Button
+                    disabled={!allAnswered}
+                    title={
+                      !allAnswered
+                        ? "Please answer all questions before submitting"
+                        : undefined
+                    }
+                  >
+                    Submit Quiz
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -294,7 +360,7 @@ const CourseQuiz = () => {
                     >
                       Cancel
                     </Button>
-                    <Button onClick={handleSubmitQuiz}>Submit</Button>
+                    <Button onClick={handleConfirmSubmit}>Submit</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -321,6 +387,23 @@ const CourseQuiz = () => {
             {index + 1}
           </Button>
         ))}
+      </div>
+
+      <div>
+        <Alert className="mt-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Important</AlertTitle>
+          <AlertDescription>
+            Once you submit the quiz, you cannot change your answers. Make sure
+            to review all questions before submitting.
+          </AlertDescription>
+        </Alert>
+
+        <div className="mt-4">
+          <Button asChild className="w-full">
+            <Link to={`/courses/${courseId}`}>Back to Course</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
