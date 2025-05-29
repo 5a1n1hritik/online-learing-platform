@@ -8,6 +8,8 @@ import authRoutes from "./routes/authRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
+import examRoutes from "./routes/examRoutes.js";
+import examPaper from "./routes/examPaper.js";
 
 dotenv.config();
 
@@ -47,5 +49,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/quizzes", quizRoutes);
+app.use("/api/exams", examRoutes);
+app.use("/api/exampaper", examPaper);
 
 export default app;

@@ -49,6 +49,13 @@ enum OptionLabel {
   G
 }
 
+enum ExamType {
+  QUIZ
+  PRACTICE
+  MOCK
+  FINAL
+}
+
 model User {
   id                Int                @id @default(autoincrement())
   name              String
@@ -68,6 +75,7 @@ model User {
   CourseProgress    CourseProgress[]
   CourseReview      CourseReview[]
   LessonProgress    LessonProgress[]
+  examActivities    ExamActivity[]
 }
 
 model RefreshToken {
@@ -105,10 +113,10 @@ model Course {
   lessons        Lesson[]
   quizzes        Quiz[]
   exams          Exam[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
   CourseProgress CourseProgress[]
   CourseReview   CourseReview[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model CourseContent {
@@ -250,13 +258,34 @@ model Exam {
   title        String
   timeLimit    Int // in minutes
   passingScore Int
+  type           ExamType         @default(QUIZ)
   course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   courseId     Int
+  paper          ExamPaper?       @relation(fields: [paperId], references: [id])
+  paperId        Int?
   questions    ExamQuestion[]
   submissions  ExamSubmission[]
+  activities    ExamActivity[]
   lessons      Lesson[] // add this if back reference is needed
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+}
+
+model ExamPaper {
+  id        Int                 @id @default(autoincrement())
+  title     String
+  exams     Exam[]
+  questions ExamPaperQuestion[]
+  createdAt DateTime            @default(now())
+}
+
+model ExamPaperQuestion {
+  id           Int         @id @default(autoincrement())
+  paper        ExamPaper   @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  paperId      Int
+  question     ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   Int
+  order        Int          @default(0)
 }
 
 model ExamQuestion {
@@ -268,6 +297,7 @@ model ExamQuestion {
   exam        Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
   examId      Int
   ExamAnswer  ExamAnswer[]
+  paperLinks  ExamPaperQuestion[]
 }
 
 model ExamOption {
@@ -281,15 +311,15 @@ model ExamOption {
 }
 
 model ExamSubmission {
-  id          Int          @id @default(autoincrement())
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      Int
-  exam        Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
-  examId      Int
-  score       Int
-  timeTaken   Int // in seconds
-  userAnswers ExamAnswer[] // Array of selected option indexes
-  submittedAt DateTime     @default(now())
+  id             Int            @id @default(autoincrement())
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  exam           Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId         Int
+  score          Int
+  timeTaken      Int            // in seconds
+  userAnswers    ExamAnswer[]
+  submittedAt    DateTime       @default(now())
 }
 
 model ExamAnswer {
@@ -309,4 +339,15 @@ model UserActivityStats {
   totalExamsTaken      Int  @default(0)
   totalQuestionsSolved Int  @default(0)
   totalTimeSpent       Int  @default(0) // in seconds
+}
+
+model ExamActivity {
+  id           Int      @id @default(autoincrement())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examId       Int
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  attempts     Int      @default(0)
 }
