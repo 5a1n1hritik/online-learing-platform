@@ -10,6 +10,7 @@ import Navbar from "./components/Navbar";
 import Courses from "./page/Courses";
 import CourseDetails from "./page/CourseDetails";
 import CourseQuiz from "./components/CourseQuiz";
+import CoursesExams from "./components/CoursesExams";
 
 function App() {
   const location = useLocation();
@@ -28,6 +29,7 @@ function App() {
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
         <Route path="/courses/:courseId/quiz/:quizId" element={<CourseQuiz />} />
+        <Route path="/courses/:courseId/exam/:examId" element={<CoursesExams />} />
       </Routes>
 
       {!isAdminDashboard && <Footer />}

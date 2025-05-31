@@ -116,7 +116,7 @@ const CourseDetails = () => {
   const [error, setError] = useState(null);
 
   const [quizzes, setQuizzes] = useState([]);
-  // const [exams, setExams] = useState([]);
+  const [exams, setExams] = useState([]);
   const [quizLoading, setQuizLoading] = useState(true);
   const [quizError, setQuizError] = useState(null);
 
@@ -140,6 +140,7 @@ const CourseDetails = () => {
       try {
         const response = await API.get(`/quizzes/course/${courseId}`);
         setQuizzes(response.data.quiz);
+        console.log(response.data.quiz);
       } catch (error) {
         setQuizError(error.message);
       } finally {
@@ -149,20 +150,20 @@ const CourseDetails = () => {
     fetchQuizzes();
   }, [courseId]);
 
-  // useEffect(() => {
-  //   const fetchExams = async () => {
-  //     try {
-  //       const response = await API.get(`/exams/course/${courseId}`);
-  //       setExams(response.data.data);
-  //       console.log(response.data.data);
-  //     } catch (error) {
-  //       setQuizError(error.message);
-  //     } finally {
-  //       setQuizLoading(false);
-  //     }
-  //   };
-  //   fetchExams();
-  // }, [courseId]);
+  useEffect(() => {
+    const fetchExams = async () => {
+      try {
+        const response = await API.get(`/exams/courses/${courseId}/exams`);
+        setExams(response.data.exams);
+        console.log(response.data.exams);
+      } catch (error) {
+        setQuizError(error.message);
+      } finally {
+        setQuizLoading(false);
+      }
+    };
+    fetchExams();
+  }, [courseId]);
 
   const formatPriceINR = (price) => {
     return new Intl.NumberFormat("en-IN", {
@@ -584,7 +585,7 @@ const CourseDetails = () => {
                   Exams
                 </h2>
                 <div className="grid gap-4">
-                  {courseDetails?.exams?.map((exam, index) => (
+                  {exams?.map((exam, index) => (
                     <Card
                       key={exam.id}
                       className="overflow-hidden border-none shadow-md animate-fade-in"

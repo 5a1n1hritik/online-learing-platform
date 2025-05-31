@@ -11,7 +11,7 @@ export const createCourse = async (req, res) => {
       imageUrl,
       level,
       duration,
-      categoryId,
+      categoryId = [],
     } = req.body;
 
     const instructorId = req.user.id;
@@ -36,7 +36,8 @@ export const createCourse = async (req, res) => {
       !imageUrl ||
       !level ||
       duration === undefined ||
-      categoryId === undefined
+      !Array.isArray(categoryId) ||
+      categoryId.length === 0
     ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -51,7 +52,13 @@ export const createCourse = async (req, res) => {
         level,
         duration,
         instructorId: instructorId,
-        categoryId: parseInt(categoryId),
+        categories: {
+          connect: categoryId.map((id) => ({ id: parseInt(id) })),
+        },
+      },
+      include: {
+        categories: true,
+        instructor: { select: { name: true } },
       },
     });
 
@@ -94,8 +101,12 @@ export const getAllCourses = async (req, res) => {
         ],
       }),
       ...(level && { level }),
-      ...(parsedCategoryId && { categoryId: parsedCategoryId }),
       ...(parsedIsFree !== undefined && { isFree: parsedIsFree }),
+      ...(parsedCategoryId && {
+        categories: {
+          some: { id: parsedCategoryId }, 
+        },
+      }),
     };
 
     // Fetch filtered courses
@@ -103,7 +114,7 @@ export const getAllCourses = async (req, res) => {
       where: filters,
       include: {
         instructor: { select: { name: true } },
-        category: true,
+        categories: true,
         CourseReview: true,
         enrollments: true,
         lessons: true,

@@ -60,20 +60,20 @@ export const createExam = async (req, res) => {
 export const getAllExams = async (req, res) => {
   try {
     const exams = await prisma.exam.findMany({
-      include: {
-        paper: {
-          include: {
-            questions: {
-              orderBy: { order: "asc" },
-              include: {
-                question: {
-                  include: { options: true },
-                },
-              },
-            },
-          },
-        },
-      },
+      //   include: {
+      //     paper: {
+      //       include: {
+      //         questions: {
+      //           orderBy: { order: "asc" },
+      //           include: {
+      //             question: {
+      //               include: { options: true },
+      //             },
+      //           },
+      //         },
+      //       },
+      //     },
+      //   },
     });
     res.status(200).json({
       success: true,
@@ -85,6 +85,45 @@ export const getAllExams = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to fetch exams",
+      details: err.message,
+    });
+  }
+};
+
+export const getCourseExams = async (req, res) => {
+  const { courseId } = req.params;
+  try {
+    // Validate courseId
+    if (!courseId || isNaN(parseInt(courseId))) {
+      return res.status(400).json({ error: "Invalid course ID" });
+    }
+    const exams = await prisma.exam.findMany({
+      where: { courseId: parseInt(courseId) },
+      //   include: {
+      //     paper: {
+      //       include: {
+      //         questions: {
+      //           orderBy: { order: "asc" },
+      //           include: {
+      //             question: {
+      //               include: { options: true },
+      //             },
+      //           },
+      //         },
+      //       },
+      //     },
+      //   },
+    });
+    res.status(200).json({
+      success: true,
+      message: "Exams for course fetched successfully",
+      exams,
+    });
+  } catch (err) {
+    console.error("Error fetching course exams:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch course exams",
       details: err.message,
     });
   }
@@ -182,3 +221,273 @@ export const addQuestionToExam = async (req, res) => {
     });
   }
 };
+
+export const startExam = async (req, res) => {
+  const examId = parseInt(req.params.examId);
+  const userId = req.user?.id;
+  if (!userId || !examId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized user or invalid exam ID.",
+    });
+  }
+  try {
+    // Check for an existing pending attempt (started but not submitted)
+    const prevAttempts = await prisma.examActivity.count({
+      where: {
+        examId,
+        userId,
+        status: "STARTED",
+      },
+    });
+    // If the user has already started this exam, return an error
+    if (prevAttempts) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already started this exam and not submitted it yet. Please complete or submit your previous attempt before starting a new one.",
+      });
+    }
+    // If the user has no previous submissions, this is their first attempt
+    // Check if the exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      // include: {
+      //   paper: {
+      //     include: {
+      //       questions: {
+      //         orderBy: { order: "asc" },
+      //         include: {
+      //           question: {
+      //             include: { options: true },
+      //           },
+      //         },
+      //       },
+      //     },
+      //   },
+      //   questions: { include: { options: true } },
+      // },
+    });
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: "Exam not found",
+      });
+    }
+    // If the exam is found, we can proceed to start it
+    // Count total attempts made by this user for this exam
+    const totalAttempts = await prisma.examActivity.count({
+      where: {
+        userId,
+        examId,
+      },
+    });
+    // If this is the first attempt, set attempts to 0
+
+    // Create a new activity
+    const activity = await prisma.examActivity.create({
+      data: {
+        examId,
+        userId,
+        attempts: totalAttempts + 1,
+        status: "STARTED",
+      },
+    });
+
+    // Return the exam details along with the activity
+    return res.status(200).json({
+      success: true,
+      message: "Exam started successfully",
+      exam: {
+        id: exam.id,
+        title: exam.title,
+        timeLimit: exam.timeLimit,
+        passingScore: exam.passingScore,
+        type: exam.type,
+        attempts: activity.attempts,
+      },
+      // Return the activity details
+      activity: {
+        id: activity.id,
+        userId: activity.userId,
+        status: activity.status,
+        startedAt: activity.createdAt,
+        attempts: activity.attempts,
+      },
+    });
+  } catch (error) {
+    console.error("Error starting exam activity:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      details: error.message,
+    });
+  }
+};
+
+export const submitExam = async (req, res) => {
+  const examId = parseInt(req.params.examId);
+  const { answers, timeTaken, activityId } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId || !examId || !activityId || !Array.isArray(answers)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid input or unauthenticated user.",
+    });
+  }
+
+  try {
+    // Get exam with questions and correct answers
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        questions: {
+          include: {
+            options: true, // so we can find correct option
+          },
+        },
+      },
+    });
+
+    if (!exam)
+      return res
+        .status(404)
+        .json({ success: false, message: "Exam not found" });
+
+    // Prepare answer evaluations
+    const totalQuestions = exam.questions.length;
+    if (totalQuestions === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No questions found in the exam",
+      });
+    }
+
+
+    let correct = 0;
+    let incorrect = 0;
+    let skipped = 0;
+
+    const review = [];
+    const examAnswers = [];
+
+    // Create the submission
+    const submission = await prisma.examSubmission.create({
+      data: {
+        examId,
+        userId,
+        score: 0, // will update later
+        timeTaken,
+        status: "PENDING",
+      },
+    });
+
+    for (const { questionId, selectedOptionId } of answers) {
+      // 1. Find the question from the exam using questionId
+      const q = exam.questions.find((q) => q.id === questionId);
+      if (!q) continue; // Skip if the question is not found
+
+      // 2. Find the correct option ID from the question
+      const correctOptionId = q.options.find((opt) => opt.isCorrect)?.id;
+      if (!correctOptionId) {
+        skipped++;
+        continue; // Skip if the question has no correct option
+      }
+
+      // 3. Check if the user attempted the question
+      const attempted = selectedOptionId !== null;
+
+      // 4. Determine if the selected option is correct
+      const isCorrect = attempted && selectedOptionId === correctOptionId;
+
+      // 5. Update counters
+      if (isCorrect) correct++;
+      else if (attempted) incorrect++;
+      else skipped++;
+
+      // 6.1 Save the answer for review
+      examAnswers.push({
+        submissionId: submission.id,
+        questionId: q.id,
+        selectedOption: selectedOptionId,
+        isCorrect,
+        attempted,
+      });
+
+      // 7. Push review data for frontend result analysis
+      review.push({
+        questionId: q.id,
+        questionText_en: q.text_en,
+        questionText_hi: q.text_hi,
+        options: q.options.map((opt) => ({
+          optionId: opt.id,
+          text_en: opt.text_en,
+          text_hi: opt.text_hi,
+          isCorrect: opt.isCorrect,
+        })),
+        correctOptionId,
+        selectedOptionId,
+        isCorrect,
+        attempted,
+      });
+    }
+
+    // Calculate the score and status
+    const score = correct;
+    const percentage = (score / totalQuestions) * 100;
+    const passMark = exam.passingScore || 70;
+    const status = percentage >= passMark ? "PASSED" : "FAILED";
+
+    // Save all exam answers + update submission using transaction
+    await prisma.$transaction([
+      prisma.examAnswer.createMany({
+        data: examAnswers,
+      }),
+      prisma.examSubmission.update({
+        where: { id: submission.id },
+        data: {
+          score,
+          status,
+        },
+      }),
+    ]);
+
+    // Update the activity status to COMPLETED
+    await prisma.examActivity.update({
+      where: { id: activityId },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        durationSeconds: timeTaken,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam submitted successfully",
+      exam: {
+        id: examId,
+        title: exam.title,
+      },
+      result: {
+        submissionId: submission.id,
+        score,
+        total: totalQuestions,
+        correct,
+        incorrect,
+        skipped,
+        passMark,
+        percentage: +percentage.toFixed(2),
+        status,
+        timeTaken,
+        review,
+      },
+    });
+  } catch (error) {
+    console.error("Error submitting exam:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+
