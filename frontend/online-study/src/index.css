@@ -248,6 +248,17 @@
 
 .countdown-timer.danger {
   @apply text-red-500 animate-pulse;
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.blink {
+  animation: blink 1s step-start infinite;
 }
 
 /* Progress bar animation */

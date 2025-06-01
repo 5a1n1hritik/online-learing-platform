@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Clock,
   CheckCircle,
   AlertCircle,
   HelpCircle,
-  Save,
-  FileText,
   ChevronRight,
   ChevronLeft,
   Globe,
+  XCircle,
+  Timer,
+  Medal,
+  ListCheck,
+  ListTree,
+  LayoutDashboard,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +28,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
@@ -34,8 +38,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
 import API from "@/api/axios";
 import { Badge } from "./ui/badge";
 import {
@@ -47,16 +49,23 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Skeleton } from "./ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./ui/accordion";
+import { AnimatedResultFeedback } from "./AnimatedResultFeedback";
+import { useToast } from "@/hooks/use-toast";
 
 const CoursesExams = () => {
   const { courseId, examId } = useParams();
   const [examData, setExamData] = useState([]);
   const [examStarted, setExamStarted] = useState(false);
-  //   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [resultData, setResultData] = useState([]);
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [examSubmitted, setExamSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("en");
@@ -65,32 +74,81 @@ const CoursesExams = () => {
   const timerRef = useRef(null);
   const questionsPerPage = 10;
 
+  const { toast } = useToast();
+
   useEffect(() => {
     const fetchExamDetails = async () => {
       try {
         const response = await API.get(`/exams/details/${examId}`);
-        console.log("Exam details fetched successfully", response.data.exam);
         setExamData(response.data.exam);
-        setTimeLeft(response.data.exam.timeLimit * 60); // Convert minutes to seconds
+        setTimeLeft(response.data.exam.timeLimit * 60);
       } catch (error) {
         console.error("Failed to fetch quiz metadata", error.message);
+        toast({
+          title: "Invalid Quiz Metadata",
+          description:
+            "The quiz metadata is invalid or the quiz does not exist.",
+          variant: "destructive",
+        });
       }
     };
     fetchExamDetails();
   }, [examId]);
 
-  // Start timer when exam starts
+  const handleStartExam = async () => {
+    try {
+      const response = await API.post(`/exams/${examId}/start`);
+
+      const activityId = response.data.activity.id;
+
+      localStorage.setItem("activityId", activityId);
+
+      setExamStarted(true);
+      toast({
+        title: "Exam Started",
+        description: "You can now start answering the questions.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Failed to start exam", error.message);
+      toast({
+        title: "Error Starting Exam",
+        description: "There was an error starting the exam. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const submitExam = async ({ examId, answers, timeTaken, activityId }) => {
+    try {
+      const response = await API.post(`/exams/${examId}/submit`, {
+        answers,
+        timeTaken,
+        activityId,
+      });
+      console.log("Exam submission response:", response.data);
+      setResultData(response.data);
+      toast({
+        title: "Exam Submitted",
+        description: "Your exam has been successfully submitted.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error in useEffect:", error.message);
+      toast({
+        title: "Error Submitting Exam",
+        description:
+          "There was an error submitting your exam. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 1. Start timer when exam starts
   useEffect(() => {
     if (examStarted && !examSubmitted && timeLeft > 0) {
       timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            handleSubmitExam();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTimeLeft((prev) => prev - 1);
       }, 1000);
 
       return () => {
@@ -98,6 +156,21 @@ const CoursesExams = () => {
       };
     }
   }, [examStarted, examSubmitted]);
+
+  // 2. Watch timeLeft and auto-submit when it hits 0
+  useEffect(() => {
+    if (timeLeft === 0 && examStarted && !examSubmitted) {
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      toast({
+        title: "Time's up!",
+        description: "Your exam has been automatically submitted.",
+        variant: "default",
+      });
+
+      handleSubmitExam();
+    }
+  }, [timeLeft, examStarted, examSubmitted]);
 
   // Format time as HH:MM:SS
   const formatTime = (seconds) => {
@@ -123,13 +196,7 @@ const CoursesExams = () => {
     };
   });
 
-  const allAnswered = Object.keys(answers).length === formattedQuestions.length;
-
   const totalPages = Math.ceil(formattedQuestions.length / questionsPerPage);
-  const currentQuestion = questions.slice(
-    currentPage * questionsPerPage,
-    (currentPage + 1) * questionsPerPage
-  );
 
   // Handle answer selection for multiple choice and true/false
   const handleAnswerSelect = (questionId, answerId) => {
@@ -139,34 +206,65 @@ const CoursesExams = () => {
     }));
   };
 
-  // Calculate score for automatically graded questions
-  const calculateScore = () => {
-    let correctAnswers = 0;
-    let totalQuestions = formattedQuestions.length;
-
-    formattedQuestions.forEach((q) => {
-      const selected = answers[q.id];
-      const correct = q.options.find((opt) => opt.isCorrect); // requires isCorrect from backend
-      if (selected === correct?.id) {
-        correctAnswers++;
-      }
-    });
-
-    return Math.round((correctAnswers / totalQuestions) * 100);
-  };
-
   // Handle exam submission
   const handleSubmitExam = async () => {
+    if (examSubmitted) return;
+    setExamSubmitted(true);
     setIsProcessing(true);
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const calculatedScore = calculateScore();
-    setScore(calculatedScore);
-    setExamSubmitted(true);
-    setShowResults(true);
-    setIsProcessing(false);
+    try {
+      const formattedAnswers = Object.entries(answers).map(
+        ([questionId, selectedOptionId]) => ({
+          questionId: parseInt(questionId),
+          selectedOptionId: selectedOptionId
+            ? parseInt(selectedOptionId)
+            : null,
+        })
+      );
+
+      const activityId = localStorage.getItem("activityId");
+
+      const result = await submitExam({
+        examId: examId,
+        answers: formattedAnswers,
+        timeTaken: examData.timeLimit * 60 - timeLeft,
+        activityId: parseInt(activityId),
+      });
+      setShowResults(true);
+      setIsProcessing(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+    } catch (error) {
+      console.error("Error submitting exam:", error.message);
+      setIsProcessing(false);
+      toast({
+        title: "Error Submitting Exam",
+        description:
+          "There was an error submitting your exam. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // TODO: Handle retake exam  setup in future
+  const handleRetakeExam = () => {
+    setExamStarted(true);
+    setExamSubmitted(false);
+    setShowResults(false);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setTimeLeft(examData.timeLimit * 60);
+
     if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
   };
 
   // Get answered questions count
@@ -177,24 +275,13 @@ const CoursesExams = () => {
   // Determine time warning classes
   const getTimeClass = () => {
     if (timeLeft < 300)
-      return "countdown-timer danger text-red-500 animate-pulse blink";
-    if (timeLeft < 600) return "countdown-timer warning text-yellow-500";
+      return "countdown-timer text-red-500 animate-pulse blink";
+    if (timeLeft < 600) return "countdown-timer text-yellow-500";
     return "countdown-timer text-green-500";
   };
 
   const handleLanguageChange = (lang) => {
     setSelectedLanguage(lang);
-  };
-
-  const handleNextQuestion = () => {
-    if (currentQuestions < formattedQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    }
-  };
-  const handlePrevQuestion = () => {
-    if (currentQuestions > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
   };
 
   //   // Navigation functions
@@ -213,12 +300,6 @@ const CoursesExams = () => {
   const goToPage = (page) => {
     setCurrentPage(page);
   };
-
-  function handleConfirmSubmit() {
-    // Submit logic here
-    console.log("Submitted answers:", answers);
-    setConfirmSubmit(false);
-  }
 
   // Processing screen
   if (isProcessing) {
@@ -261,8 +342,7 @@ const CoursesExams = () => {
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex items-center gap-3 p-4 rounded-lg border">
-                <Clock className="h-6 w-6 text-blue-500" />
-                {/* <span>Time Limit: {examData.timeLimit} minutes</span> */}
+                <Timer className="h-6 w-6 text-sky-600" />
                 <div>
                   <p className="font-medium">Time Limit</p>
                   <p className="text-sm text-muted-foreground">
@@ -270,12 +350,8 @@ const CoursesExams = () => {
                   </p>
                 </div>
               </div>
-              {/* <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-muted-foreground" />
-                <span>Passing Score: {examData.passingScore}%</span>
-              </div> */}
               <div className="flex items-center gap-3 p-4 rounded-lg border">
-                <CheckCircle className="h-6 w-6 text-green-500" />
+                <Medal className="h-6 w-6 text-emerald-600" />
                 <div>
                   <p className="font-medium">Passing Score</p>
                   <p className="text-sm text-muted-foreground">
@@ -284,7 +360,7 @@ const CoursesExams = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 rounded-lg border">
-                <HelpCircle className="h-6 w-6 text-purple-500" />
+                <ListCheck className="h-6 w-6 text-indigo-600" />
                 <div>
                   <p className="font-medium">Total Questions</p>
                   <p className="text-sm text-muted-foreground">
@@ -293,16 +369,14 @@ const CoursesExams = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 rounded-lg border">
-                <Save className="h-6 w-6 text-orange-500" />
+                <ListTree className="h-6 w-6 text-pink-600" />
                 <div>
                   <p className="font-medium">Question Type</p>
-                  <p className="text-sm text-muted-foreground">
-                    True/False only
-                  </p>
+                  <p className="text-sm text-muted-foreground">MCQ only</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 rounded-lg border">
-                <FileText className="h-6 w-6 text-orange-500" />
+                <LayoutDashboard className="h-6 w-6 text-yellow-600" />
                 <div>
                   <p className="font-medium">Exam Types</p>
                   <p className="text-sm text-muted-foreground">
@@ -315,46 +389,53 @@ const CoursesExams = () => {
                   </p>
                 </div>
               </div>
-              {/* <div className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                <span>
-                  Total Questions: {examData?.paper?.questions?.length}
-                </span>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <Scale className="h-6 w-6 text-red-600" />
+                <div>
+                  <p className="font-medium">Negative Marking</p>
+                  <p className="text-sm text-muted-foreground">
+                    {/* {examData.negativeMarking
+                      ? `- ${examData.negativeMarking} per wrong answer`
+                      : "No negative marking"} */}
+                    No
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                <span>
-                  Exam Types:{" "}
-                  {examData?.type &&
-                    examData.type
-                      .toLowerCase()
-                      .replace("_", " ")
-                      .replace(/^./, (char) => char.toUpperCase())}{" "}
-                  Test
-                </span>
-              </div> */}
             </div>
 
             <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Exam Instructions</AlertTitle>
-              <AlertDescription className="space-y-2">
-                <p>• All questions are True/False format</p>
-                <p>• You can navigate between pages and review your answers</p>
-                <p>• The exam will auto-submit when time runs out</p>
-                <p>• Make sure to answer all questions before submitting</p>
-                <p>
-                  • Once you start the exam, the timer will begin. You must
-                  complete
-                </p>
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <AlertTitle className="text-base font-semibold">
+                Exam Instructions
+              </AlertTitle>
+              <AlertDescription className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <ul className="list-disc list-inside space-y-1">
+                  <li>All questions are in MCQ format</li>
+                  <li>
+                    You can navigate between pages and review your answers
+                  </li>
+                  <li>
+                    <span className="text-red-600 font-medium">
+                      ⚠ The exam will auto-submit when the time runs out
+                    </span>
+                  </li>
+                  <li>Make sure to answer all questions before submitting</li>
+                  <li>
+                    Once you start the exam, the timer will begin and you must
+                    complete the exam within the allotted time
+                  </li>
+                </ul>
               </AlertDescription>
             </Alert>
+            <p className="text-sm italic text-muted-foreground text-center">
+              The timer will start immediately after clicking “Start Exam”.
+            </p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild variant="outline">
               <Link to={`/courses/${courseId}`}>Back to Course</Link>
             </Button>
-            <Button onClick={() => setExamStarted(true)}>Start Exam</Button>
+            <Button onClick={handleStartExam}>Start Exam</Button>
           </CardFooter>
         </Card>
       </div>
@@ -362,268 +443,245 @@ const CoursesExams = () => {
   }
 
   // Exam results screen
-  // if (showResults) {
-  //   const passed = score >= examData.passingScore;
-  //   return (
-  //     <div className="container max-w-4xl py-12">
-  //       <Card className="animate-fade-in">
-  //         <CardHeader>
-  //           <CardTitle className="text-2xl">Exam Results</CardTitle>
-  //           <CardDescription>{examData.title}</CardDescription>
-  //         </CardHeader>
-  //         <CardContent className="space-y-6">
-  //           <div className="flex flex-col items-center justify-center py-6">
-  //             <div
-  //               className={`text-5xl font-bold mb-2 ${
-  //                 passed ? "text-green-500" : "text-red-500"
-  //               }`}
-  //             >
-  //               {score}%
-  //             </div>
-  //             <p className="text-muted-foreground">
-  //               Your score on automatically graded questions
-  //             </p>
-  //             <div className="mt-4">
-  //               {passed ? (
-  //                 <div className="flex items-center gap-2 text-green-500">
-  //                   <CheckCircle className="h-6 w-6" />
-  //                   <span className="font-medium">You passed!</span>
-  //                 </div>
-  //               ) : (
-  //                 <div className="flex items-center gap-2 text-red-500">
-  //                   <AlertCircle className="h-6 w-6" />
-  //                   <span className="font-medium">
-  //                     You did not pass. Try again!
-  //                   </span>
-  //                 </div>
-  //               )}
-  //             </div>
-  //           </div>
+  if (showResults) {
+    const passed = resultData?.result.percentage >= resultData?.result.passMark;
+    return (
+      <div className="container max-w-4xl py-12">
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle className="text-2xl">Exam Results</CardTitle>
+            <CardDescription>{examData.title}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <AnimatedResultFeedback
+              passed={passed}
+              score={resultData?.result.percentage}
+            />
 
-  //           <Card>
-  //             <CardHeader>
-  //               <CardTitle>Score Breakdown</CardTitle>
-  //               <CardDescription>
-  //                 Detailed analysis of your performance
-  //               </CardDescription>
-  //             </CardHeader>
-  //             <CardContent>
-  //               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-  //                 <div className="text-center p-4 border rounded-lg">
-  //                   <div className="text-2xl font-bold text-blue-500">
-  //                     {questions.length}
-  //                   </div>
-  //                   <div className="text-sm text-muted-foreground">
-  //                     Total Questions
-  //                   </div>
-  //                 </div>
-  //                 <div className="text-center p-4 border rounded-lg">
-  //                   <div className="text-2xl font-bold text-green-500">
-  //                     {
-  //                       questions.filter(
-  //                         (ua) => ua.selectedOptionId === ua.correctOptionId
-  //                       ).length
-  //                     }
-  //                   </div>
-  //                   <div className="text-sm text-muted-foreground">
-  //                     Correct Answers
-  //                   </div>
-  //                 </div>
-  //                 <div className="text-center p-4 border rounded-lg">
-  //                   <div className="text-2xl font-bold text-red-500">
-  //                     {
-  //                       questions.filter(
-  //                         (ua) => ua.selectedOptionId !== ua.correctOptionId
-  //                       ).length
-  //                     }
-  //                   </div>
-  //                   <div className="text-sm text-muted-foreground">
-  //                     Incorrect Answers
-  //                   </div>
-  //                 </div>
-  //                 <div className="text-center p-4 border rounded-lg">
-  //                   <div className="text-2xl font-bold text-gray-500">
-  //                     {/* {unattemptedQuestions} */}TODO:not set
-  //                   </div>
-  //                   <div className="text-sm text-muted-foreground">
-  //                     Unattempted
-  //                   </div>
-  //                 </div>
-  //                 <div className="text-center p-4 border rounded-lg">
-  //                   <div className="text-2xl font-bold text-gray-500">
-  //                     {examData.timeTaken} seconds
-  //                   </div>
-  //                   <div className="text-sm text-muted-foreground">
-  //                     Take Time
-  //                   </div>
-  //                 </div>
-  //               </div>
-  //             </CardContent>
-  //           </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Score Breakdown</CardTitle>
+                <CardDescription>
+                  Detailed analysis of your performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 rounded-lg border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          {" "}
+                          Total Questions
+                        </div>
+                        <div className="text-xl font-semibold text-blue-500">
+                          {resultData?.result.total}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          {" "}
+                          Correct Answers
+                        </div>
+                        <div className="text-xl font-semibold text-green-500">
+                          {resultData?.result.correct}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          {" "}
+                          Incorrect Answers
+                        </div>
+                        <div className="text-xl font-semibold text-red-500">
+                          {resultData?.result.incorrect}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          {" "}
+                          Unattempted
+                        </div>
+                        <div className="text-xl font-semibold text-gray-500">
+                          {resultData?.result.skipped}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500"> Take Time</div>
+                        <div className="text-xl font-semibold text-gray-500">
+                          {`${resultData?.result.timeTaken} seconds`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-  //           <Separator />
+            <Card>
+              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                <div>
+                  <CardTitle>Questions Review</CardTitle>
+                  <CardDescription>
+                    Review your answers and see the correct solutions
+                  </CardDescription>
+                </div>
 
-  //           <div className="space-y-4">
-  //             <h3 className="text-lg font-medium">Question Review</h3>
-  //             <Card>
-  //               <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-  //                 <CardTitle>Question Review</CardTitle>
-  //                 <CardDescription>
-  //                   Review your answers and see the correct solutions
-  //                 </CardDescription>
-  //                 {/* <div className=" space-x-2">
-  //                 <Button
-  //                   variant={language === "en" ? "default" : "outline"}
-  //                   onClick={() => setLanguage("en")}
-  //                 >
-  //                   English
-  //                 </Button>
-  //                 <Button
-  //                   variant={language === "hi" ? "default" : "outline"}
-  //                   onClick={() => setLanguage("hi")}
-  //                 >
-  //                   हिन्दी
-  //                 </Button>
-  //               </div> */}
-  //               </CardHeader>
+                {/* Language Selection Buttons inside Card */}
+                <div className="flex space-x-2">
+                  <Button
+                    variant={selectedLanguage === "en" ? "default" : "outline"}
+                    onClick={() => setSelectedLanguage("en")}
+                  >
+                    English
+                  </Button>
+                  <Button
+                    variant={selectedLanguage === "hi" ? "default" : "outline"}
+                    onClick={() => setSelectedLanguage("hi")}
+                  >
+                    हिन्दी
+                  </Button>
+                </div>
+              </CardHeader>
 
-  //               <CardContent>
-  //                 <Accordion
-  //                   type="single"
-  //                   collapsible={true}
-  //                   className="w-full space-y-2"
-  //                 >
-  //                   {questions.map((ua, index) => {
-  //                     const isCorrect =
-  //                       ua.selectedOptionId === ua.correctOptionId;
-  //                     const wasAttempted = ua.selectedOptionId !== null;
+              <CardContent>
+                <Accordion
+                  type="single"
+                  collapsible={true}
+                  className="w-full space-y-2"
+                >
+                  {resultData?.result.review.map((qa, index) => {
+                    const wasAttempted = qa.attempted;
+                    const isCorrect = qa.isCorrect;
 
-  //                     return (
-  //                       <AccordionItem
-  //                         key={ua.questionId}
-  //                         value={`question-${index}`}
-  //                       >
-  //                         <AccordionTrigger className="text-left">
-  //                           <div className="flex items-center gap-3 w-full">
-  //                             <div className="flex items-center gap-2">
-  //                               <span className="font-medium">
-  //                                 Question {index + 1}
-  //                               </span>
-  //                               {wasAttempted ? (
-  //                                 isCorrect ? (
-  //                                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-  //                                     <CheckCircle className="h-3 w-3 mr-1" />
-  //                                     Correct
-  //                                   </Badge>
-  //                                 ) : (
-  //                                   <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-  //                                     <AlertCircle className="h-3 w-3 mr-1" />
-  //                                     Incorrect
-  //                                   </Badge>
-  //                                 )
-  //                               ) : (
-  //                                 <Badge variant="secondary">
-  //                                   <HelpCircle className="h-3 w-3 mr-1" />
-  //                                   Unattempted
-  //                                 </Badge>
-  //                               )}
-  //                             </div>
-  //                           </div>
-  //                         </AccordionTrigger>
+                    return (
+                      <AccordionItem
+                        key={qa.questionId}
+                        value={`question-${index}`}
+                      >
+                        <AccordionTrigger className="text-left">
+                          <div className="flex items-center gap-3 w-full">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                Question {index + 1}
+                              </span>
+                              {wasAttempted ? (
+                                isCorrect ? (
+                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Correct
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Incorrect
+                                  </Badge>
+                                )
+                              ) : (
+                                <Badge variant="secondary">
+                                  <HelpCircle className="h-3 w-3 mr-1" />
+                                  Unattempted
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </AccordionTrigger>
 
-  //                         <AccordionContent>
-  //                           <div className="space-y-4 pt-2">
-  //                             <p className="font-medium text-base md:text-lg">
-  //                               {language === "en"
-  //                                 ? ua.questionText_en
-  //                                 : ua.questionText_hi}
-  //                             </p>
+                        <AccordionContent>
+                          <div className="space-y-4 pt-2">
+                            <p className="font-medium text-base md:text-lg">
+                              {selectedLanguage === "en"
+                                ? qa.questionText_en
+                                : qa.questionText_hi}
+                            </p>
 
-  //                             <div className="space-y-3">
-  //                               {ua.allOptions.map((option) => {
-  //                                 const isCorrectOption =
-  //                                   option.id === ua.correctOptionId;
-  //                                 const isSelectedOption =
-  //                                   option.id === ua.selectedOptionId;
+                            <div className="space-y-3">
+                              {qa.options.map((option) => {
+                                const isCorrectOption =
+                                  option.optionId === qa.correctOptionId;
+                                const isSelectedOption =
+                                  option.optionId === qa.selectedOptionId;
 
-  //                                 return (
-  //                                   <div
-  //                                     key={option.id}
-  //                                     className={`relative p-3 rounded-xl border flex items-start gap-3 transition-all duration-300 ${
-  //                                       isCorrectOption
-  //                                         ? "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800"
-  //                                         : isSelectedOption
-  //                                         ? "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800"
-  //                                         : "bg-muted dark:bg-muted/30 border-border"
-  //                                     }`}
-  //                                   >
-  //                                     {/* Option Text */}
-  //                                     <span>
-  //                                       {language === "en"
-  //                                         ? option.text_en
-  //                                         : option.text_hi}
-  //                                       {isSelectedOption && (
-  //                                         <span className="ml-2 italic text-muted-foreground text-xs">
-  //                                           (You selected)
-  //                                         </span>
-  //                                       )}
-  //                                     </span>
+                                return (
+                                  <div
+                                    key={option.optionId}
+                                    className={`relative p-3 rounded-xl border flex items-start gap-3 transition-all duration-300 ${
+                                      isCorrectOption
+                                        ? "bg-green-100 border-green-500 dark:bg-green-900/10 dark:border-green-800"
+                                        : isSelectedOption
+                                        ? "bg-red-100 border-red-500 dark:bg-red-900/10 dark:border-red-800"
+                                        : "bg-muted dark:bg-muted/30 border-border"
+                                    }`}
+                                  >
+                                    {/* Option Text */}
+                                    <span>
+                                      {selectedLanguage === "en"
+                                        ? option.text_en
+                                        : option.text_hi}
+                                      {isSelectedOption && (
+                                        <span className="ml-2 italic text-muted-foreground text-xs">
+                                          (You selected) ( आपका उत्तर )
+                                        </span>
+                                      )}
+                                    </span>
 
-  //                                     {/* Icons */}
-  //                                     <div className="flex-shrink-0 pt-1 ml-auto">
-  //                                       {isCorrectOption && (
-  //                                         <CheckCircle className="h-4 w-4 text-green-500" />
-  //                                       )}
-  //                                       {isSelectedOption &&
-  //                                         !isCorrectOption && (
-  //                                           <XCircle className="h-4 w-4 text-red-500" />
-  //                                         )}
-  //                                     </div>
-  //                                   </div>
-  //                                 );
-  //                               })}
-  //                             </div>
+                                    {/* Icons */}
+                                    <div className="flex-shrink-0 pt-1 ml-auto">
+                                      {isCorrectOption && (
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      )}
+                                      {isSelectedOption && !isCorrectOption && (
+                                        <XCircle className="h-4 w-4 text-red-500" />
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
 
-  //                             {/* If Unattempted */}
-  //                             {!wasAttempted && (
-  //                               <p className="text-sm text-muted-foreground italic mt-2">
-  //                                 You did not answer this question.
-  //                               </p>
-  //                             )}
-  //                           </div>
-  //                         </AccordionContent>
-  //                       </AccordionItem>
-  //                     );
-  //                   })}
-  //                 </Accordion>
-  //               </CardContent>
-  //             </Card>
-  //           </div>
-  //         </CardContent>
-  //         <CardFooter className="flex justify-between">
-  //           <Button
-  //             variant="outline"
-  //             onClick={() => router.push(`/courses/${params.id}`)}
-  //           >
-  //             Back to Course
-  //           </Button>
-  //           <Button
-  //             onClick={() => {
-  //               setExamStarted(false);
-  //               setExamSubmitted(false);
-  //               setShowResults(false);
-  //               setCurrentQuestion(0);
-  //               setAnswers({});
-  //               setTimeLeft(examData.timeLimit * 60);
-  //             }}
-  //           >
-  //             Retake Exam
-  //           </Button>
-  //         </CardFooter>
-  //       </Card>
-  //     </div>
-  //   );
-  // }
+                            {/* If Unattempted */}
+                            {!wasAttempted && (
+                              <p className="text-sm font-bold text-muted-foreground italic mt-2">
+                                You did not answer this question. ( उत्तर नहीं
+                                दिया )
+                              </p>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </CardContent>
+            </Card>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button asChild variant="outline">
+              <Link to={`/courses/${courseId}`}>Back to Course</Link>
+            </Button>
+            <Button disabled onClick={handleRetakeExam}>
+              Retake Exam
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl py-12">
@@ -639,28 +697,32 @@ const CoursesExams = () => {
                 className="flex items-center gap-2 h-8 px-3 text-xs"
               >
                 <Globe className="h-4 w-4" />
-                {selectedLanguage === "en"
-                  ? "English"
-                  : selectedLanguage === "hi"
-                  ? "हिंदी"
-                  : "Language"}
+                {{
+                  en: "English",
+                  hi: "हिंदी",
+                  bn: "বাংলা",
+                  mr: "मराठी",
+                }[selectedLanguage] || "Language"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Select Language</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleLanguageChange("en")}>
-                English
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange("hi")}>
-                हिंदी
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange("bn")}>
-                বাংলা
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange("mr")}>
-                मराठी
-              </DropdownMenuItem>
+              {["en", "hi", "bn", "mr"].map((lang) => (
+                <DropdownMenuItem
+                  key={lang}
+                  onClick={() => handleLanguageChange(lang)}
+                >
+                  {
+                    {
+                      en: "English",
+                      hi: "हिंदी",
+                      bn: "বাংলা",
+                      mr: "मराठी",
+                    }[lang]
+                  }
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
           <div
@@ -671,23 +733,8 @@ const CoursesExams = () => {
           </div>
         </div>
       </div>
-      {/* Progress */}
-      {/* <div className="mb-6">
-        <div className="flex justify-between text-sm mb-2">
-          <span>
-            Question {currentQuestion + 1} of {questions.length}
-          </span>
-          <span>
-            {Math.round(((currentQuestion + 1) / questions.length) * 100)}%
-            Complete
-          </span>
-        </div>
-        <Progress
-          value={((currentQuestion + 1) / questions.length) * 100}
-          className="h-2"
-        />
-      </div> */}
-      {/* Progress */}
+
+      {/* Progress Bar */}
       <div className="mb-6">
         <div className="flex justify-between text-sm mb-2">
           <span>
@@ -804,12 +851,15 @@ const CoursesExams = () => {
               <DialogHeader>
                 <DialogTitle>Submit Exam</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to submit your exam? You have answered{" "}
-                  {getAnsweredCount()} out of {examData.questions.length}{" "}
-                  questions.
+                  Are you sure you want to submit your exam? Once you submit the
+                  exam, you cannot change your answers. Make sure to review all
+                  questions before submitting.
+                  <br />
+                  You have answered {getAnsweredCount()} out of{" "}
+                  {examData.questions.length} questions.
                   {getAnsweredCount() < examData.questions.length && (
                     <span className="block mt-2 text-yellow-600">
-                      Warning: You have{" "}
+                      ⚠️ Warning: You have{" "}
                       {examData.questions.length - getAnsweredCount()}{" "}
                       unanswered questions.
                     </span>
@@ -878,15 +928,6 @@ const CoursesExams = () => {
       </Card>
 
       <div>
-        <Alert className="mt-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Important</AlertTitle>
-          <AlertDescription>
-            Once you submit the quiz, you cannot change your answers. Make sure
-            to review all questions before submitting.
-          </AlertDescription>
-        </Alert>
-
         <div className="mt-4">
           <Button asChild className="w-full">
             <Link to={`/courses/${courseId}`}>Back to Course</Link>

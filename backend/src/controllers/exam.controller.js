@@ -244,7 +244,8 @@ export const startExam = async (req, res) => {
     if (prevAttempts) {
       return res.status(400).json({
         success: false,
-        message: "You have already started this exam and not submitted it yet. Please complete or submit your previous attempt before starting a new one.",
+        message:
+          "You have already started this exam and not submitted it yet. Please complete or submit your previous attempt before starting a new one.",
       });
     }
     // If the user has no previous submissions, this is their first attempt
@@ -341,28 +342,36 @@ export const submitExam = async (req, res) => {
     const exam = await prisma.exam.findUnique({
       where: { id: examId },
       include: {
-        questions: {
+        paper: {
           include: {
-            options: true, // so we can find correct option
+            questions: {
+              orderBy: { order: "asc" },
+              include: {
+                question: {
+                  include: {
+                    options: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
 
-    if (!exam)
+    if (!exam || !exam.paper || exam.paper.questions.length === 0)
       return res
         .status(404)
-        .json({ success: false, message: "Exam not found" });
+        .json({ success: false, message: "Exam or its questions not found" });
 
     // Prepare answer evaluations
-    const totalQuestions = exam.questions.length;
+    const totalQuestions = exam.paper.questions.length;
     if (totalQuestions === 0) {
       return res.status(400).json({
         success: false,
         message: "No questions found in the exam",
       });
     }
-
 
     let correct = 0;
     let incorrect = 0;
@@ -376,49 +385,47 @@ export const submitExam = async (req, res) => {
       data: {
         examId,
         userId,
-        score: 0, // will update later
+        score: 0, 
         timeTaken,
         status: "PENDING",
       },
     });
 
-    for (const { questionId, selectedOptionId } of answers) {
-      // 1. Find the question from the exam using questionId
-      const q = exam.questions.find((q) => q.id === questionId);
-      if (!q) continue; // Skip if the question is not found
+    const questionsList = exam?.paper?.questions || [];
 
-      // 2. Find the correct option ID from the question
+    for (const paperQ of questionsList.sort((a, b) => a.order - b.order)) {
+      const q = paperQ.question;
+      if (!q || !q.options) continue;
+
+      const answer = answers.find((ans) => ans.questionId === q.id);
+      const selectedOptionId = answer?.selectedOptionId || null;
+
       const correctOptionId = q.options.find((opt) => opt.isCorrect)?.id;
       if (!correctOptionId) {
         skipped++;
-        continue; // Skip if the question has no correct option
+        continue;
       }
 
-      // 3. Check if the user attempted the question
       const attempted = selectedOptionId !== null;
-
-      // 4. Determine if the selected option is correct
       const isCorrect = attempted && selectedOptionId === correctOptionId;
 
-      // 5. Update counters
       if (isCorrect) correct++;
       else if (attempted) incorrect++;
       else skipped++;
 
-      // 6.1 Save the answer for review
       examAnswers.push({
         submissionId: submission.id,
         questionId: q.id,
         selectedOption: selectedOptionId,
         isCorrect,
         attempted,
+        examActivityId: activityId,
       });
 
-      // 7. Push review data for frontend result analysis
       review.push({
         questionId: q.id,
-        questionText_en: q.text_en,
-        questionText_hi: q.text_hi,
+        questionText_en: q.question_en,
+        questionText_hi: q.question_hi,
         options: q.options.map((opt) => ({
           optionId: opt.id,
           text_en: opt.text_en,
@@ -490,4 +497,3 @@ export const submitExam = async (req, res) => {
       .json({ success: false, message: "Internal Server Error" });
   }
 };
-

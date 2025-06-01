@@ -11,6 +11,7 @@ import Courses from "./page/Courses";
 import CourseDetails from "./page/CourseDetails";
 import CourseQuiz from "./components/CourseQuiz";
 import CoursesExams from "./components/CoursesExams";
+import { Toaster } from "./components/ui/toaster";
 
 function App() {
   const location = useLocation();
@@ -32,6 +33,7 @@ function App() {
         <Route path="/courses/:courseId/exam/:examId" element={<CoursesExams />} />
       </Routes>
 
+      <Toaster />
       {!isAdminDashboard && <Footer />}
     </div>
   );
