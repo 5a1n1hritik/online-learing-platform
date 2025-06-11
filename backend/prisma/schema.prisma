@@ -53,14 +53,19 @@ enum ExamType {
   QUIZ
   PRACTICE
   MOCK
+  MCQ
   FINAL
+  DESCRIPTIVE
+  MIXED
 }
 
 enum ExamStatus {
   STARTED
   IN_PROGRESS
+  PENDING
   COMPLETED
   TIMEOUT
+  EXPIRED
 }
 
 enum SubmissionStatus {
@@ -273,6 +278,7 @@ model QuizAnswer {
 model Exam {
   id           Int          @id @default(autoincrement())
   title        String
+  description    String?
   timeLimit    Int
   passingScore Int
   type         ExamType     @default(QUIZ)
@@ -285,6 +291,12 @@ model Exam {
 
   paper        ExamPaper?   @relation(fields: [paperId], references: [id])
   paperId      Int?
+
+  difficulty     Difficulty     @default(MEDIUM) // ➕ Already exists, can use for difficulty level
+  tags           String[]       // ➕ New: Array of tags (e.g., ["reasoning", "aptitude"])
+  participants   Int            @default(0)      // ➕ New: To track how many have taken the exam
+  isPaid         Boolean        @default(false)  // ➕ New: To indicate if the exam is paid
+  negativeMarking Float         @default(0.0)    // ➕ New: e.g., 0.25 for ¼ mark deduction
 
   questions    ExamQuestion[]
   submissions  ExamSubmission[]
@@ -362,15 +374,6 @@ model ExamAnswer {
   createdAt      DateTime         @default(now())
 }
 
-model UserActivityStats {
-  id                   Int  @id @default(autoincrement())
-  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId               Int  @unique
-  totalExamsTaken      Int  @default(0)
-  totalQuestionsSolved Int  @default(0)
-  totalTimeSpent       Int  @default(0) // in seconds
-}
-
 model ExamActivity {
   id           Int      @id @default(autoincrement())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -384,3 +387,13 @@ model ExamActivity {
   durationSeconds Int?
   answers      ExamAnswer[]
 }
+
+model UserActivityStats {
+  id                   Int  @id @default(autoincrement())
+  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               Int  @unique
+  totalExamsTaken      Int  @default(0)
+  totalQuestionsSolved Int  @default(0)
+  totalTimeSpent       Int  @default(0) // in seconds
+}
+

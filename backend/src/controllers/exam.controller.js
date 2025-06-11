@@ -2,7 +2,21 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const createExam = async (req, res) => {
-  const { title, timeLimit, passingScore, type, courseId, paperId } = req.body;
+  const {
+    title,
+    description,
+    timeLimit,
+    passingScore,
+    type,
+    courseId,
+    paperId,
+    category,
+    difficulty,
+    tags,
+    participants,
+    isPaid,
+    negativeMarking,
+  } = req.body;
 
   try {
     // Validate required fields
@@ -10,10 +24,27 @@ export const createExam = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
     // Validate type
-    const validTypes = ["MCQ", "Descriptive", "Mixed"];
+    const validTypes = [
+      "QUIZ",
+      "PRACTICE",
+      "MOCK",
+      "MCQ",
+      "FINAL",
+      "DESCRIPTIVE",
+      "MIXED",
+    ];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         error: `Invalid exam type. Valid types are: ${validTypes.join(", ")}`,
+      });
+    }
+    // Validate difficulty level (optional, but recommended)
+    const validDifficulties = ["EASY", "MEDIUM", "HARD"];
+    if (difficulty && !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({
+        error: `Invalid difficulty level. Valid options: ${validDifficulties.join(
+          ", "
+        )}`,
       });
     }
     // Validate courseId
@@ -35,11 +66,18 @@ export const createExam = async (req, res) => {
     const exam = await prisma.exam.create({
       data: {
         title,
+        description: description || "",
+        categoryId: category ? parseInt(category) : null,
+        difficulty: difficulty ? difficulty.toUpperCase() : undefined,
+        tags: tags || [],
+        negativeMarking: negativeMarking || 0,
         timeLimit,
         passingScore,
-        type,
+        type: type.toUpperCase(),
         courseId,
         paperId: paperId || null,
+        participants: participants || 0,
+        isPaid: isPaid || false,
       },
     });
     res.status(201).json({
@@ -59,36 +97,81 @@ export const createExam = async (req, res) => {
 
 export const getAllExams = async (req, res) => {
   try {
-    const exams = await prisma.exam.findMany({
-      //   include: {
-      //     paper: {
-      //       include: {
-      //         questions: {
-      //           orderBy: { order: "asc" },
-      //           include: {
-      //             question: {
-      //               include: { options: true },
-      //             },
-      //           },
-      //         },
-      //       },
-      //     },
-      //   },
-    });
+    const {
+      page = 1,
+      limit = 9,
+      type,
+      difficulty,
+      courseId,
+      categoryId,
+      isPaid,
+      search,
+    } = req.query;
+
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+
+    const filters = {};
+    if (type) filters.type = type;
+    if (difficulty) filters.difficulty = difficulty;
+    if (courseId) filters.courseId = parseInt(courseId);
+    if (categoryId) filters.categoryId = parseInt(categoryId);
+    if (isPaid !== undefined) filters.isPaid = isPaid === 'true';
+
+    const searchConditions = [];
+
+    if (search) {
+      searchConditions.push(
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { tags: { hasSome: [search.toLowerCase()] } }
+      );
+    }
+
+    const where = {
+      ...filters,
+      ...(searchConditions.length > 0 && {
+        OR: searchConditions,
+      }),
+    };
+
+    const [exams, total] = await Promise.all([
+      prisma.exam.findMany({
+        where,
+        skip: (pageNumber - 1) * limitNumber,
+        take: limitNumber,
+        include: {
+          course: { select: { id: true, title: true } },
+          category: { select: { id: true, name: true } },
+          paper: { select: { id: true, title: true } },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.exam.count({ where }),
+    ]);
+
     res.status(200).json({
       success: true,
-      message: "Exams fetched successfully",
-      exams,
+      message: 'Exams fetched successfully',
+      data: exams,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber),
+      },
     });
   } catch (err) {
     console.error("Error fetching exams:", err);
     res.status(500).json({
       success: false,
-      error: "Failed to fetch exams",
-      details: err.message,
+      message: 'Internal Server Error',
     });
   }
 };
+
 
 export const getCourseExams = async (req, res) => {
   const { courseId } = req.params;
@@ -139,6 +222,19 @@ export const getExamDetails = async (req, res) => {
     const exam = await prisma.exam.findUnique({
       where: { id: parseInt(examId) },
       include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         paper: {
           include: {
             questions: {
@@ -151,9 +247,35 @@ export const getExamDetails = async (req, res) => {
             },
           },
         },
-        questions: { include: { options: true } },
+        submissions: {
+          select: {
+            id: true,
+            userId: true,
+            score: true,
+            status: true,
+            submittedAt: true,
+          },
+        },
+        activities: {
+          select: {
+            id: true,
+            userId: true,
+            startedAt: true,
+            completedAt: true,
+            status: true,
+            attempts: true,
+          },
+        },
+        // questions: { include: { options: true } },
       },
     });
+
+    if (!exam) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Exam not found" });
+    }
+
     res.status(200).json({
       success: true,
       message: "Exam details fetched successfully",
@@ -222,7 +344,7 @@ export const addQuestionToExam = async (req, res) => {
   }
 };
 
-export const startExam = async (req, res) => {
+export const checkExamAttempt = async (req, res) => {
   const examId = parseInt(req.params.examId);
   const userId = req.user?.id;
   if (!userId || !examId) {
@@ -233,21 +355,62 @@ export const startExam = async (req, res) => {
   }
   try {
     // Check for an existing pending attempt (started but not submitted)
-    const prevAttempts = await prisma.examActivity.count({
+    const existingActivity = await prisma.examActivity.findFirst({
       where: {
         examId,
         userId,
         status: "STARTED",
       },
+      select: {
+        id: true,
+        attempts: true,
+      },
     });
+
+    return res.status(200).json({
+      success: true,
+      message: "Exam attempt status fetched successfully",
+      hasOngoingAttempt: !!existingActivity,
+      ongoingActivity: existingActivity || null,
+    });
+  } catch (error) {
+    console.error("Error checking exam attempt:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      details: error.message,
+    });
+  }
+};
+
+export const startExam = async (req, res) => {
+  const examId = parseInt(req.params.examId);
+  const userId = req.user?.id;
+  const resume = req.query.resume === "true";
+
+  if (!userId || !examId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized user or invalid exam ID.",
+    });
+  }
+  try {
+    // Check for an existing pending attempt (started but not submitted)
+    // const prevAttempts = await prisma.examActivity.count({
+    //   where: {
+    //     examId,
+    //     userId,
+    //     status: "STARTED",
+    //   },
+    // });
     // If the user has already started this exam, return an error
-    if (prevAttempts) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "You have already started this exam and not submitted it yet. Please complete or submit your previous attempt before starting a new one.",
-      });
-    }
+    // if (prevAttempts) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message:
+    //       "You have already started this exam and not submitted it yet. Please complete or submit your previous attempt before starting a new one.",
+    //   });
+    // }
     // If the user has no previous submissions, this is their first attempt
     // Check if the exam exists
     const exam = await prisma.exam.findUnique({
@@ -274,6 +437,57 @@ export const startExam = async (req, res) => {
         message: "Exam not found",
       });
     }
+
+    // Resume old exam
+    if (resume) {
+      const existingActivity = await prisma.examActivity.findFirst({
+        where: {
+          userId,
+          examId,
+          status: "STARTED",
+        },
+      });
+
+      if (existingActivity) {
+        return res.status(200).json({
+          success: true,
+          message: "Resuming previous exam attempt",
+          exam: {
+            id: exam.id,
+            title: exam.title,
+            timeLimit: exam.timeLimit,
+            passingScore: exam.passingScore,
+            type: exam.type,
+            attempts: existingActivity.attempts,
+          },
+          activity: {
+            id: existingActivity.id,
+            userId: existingActivity.userId,
+            status: existingActivity.status,
+            startedAt: existingActivity.createdAt,
+            attempts: existingActivity.attempts,
+          },
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "No previous exam attempt to resume.",
+        });
+      }
+    }
+
+    // 3. Expire any previously unsubmitted attempts
+    await prisma.examActivity.updateMany({
+      where: {
+        examId,
+        userId,
+        status: "STARTED",
+      },
+      data: {
+        status: "EXPIRED",
+      },
+    });
+
     // If the exam is found, we can proceed to start it
     // Count total attempts made by this user for this exam
     const totalAttempts = await prisma.examActivity.count({
@@ -297,7 +511,7 @@ export const startExam = async (req, res) => {
     // Return the exam details along with the activity
     return res.status(200).json({
       success: true,
-      message: "Exam started successfully",
+      message: "New exam attempt started successfully",
       exam: {
         id: exam.id,
         title: exam.title,
@@ -373,9 +587,11 @@ export const submitExam = async (req, res) => {
       });
     }
 
+    const negativeMarkPerWrong = exam.negativeMarking || 0;
     let correct = 0;
     let incorrect = 0;
     let skipped = 0;
+    let totalScore = 0;
 
     const review = [];
     const examAnswers = [];
@@ -385,7 +601,7 @@ export const submitExam = async (req, res) => {
       data: {
         examId,
         userId,
-        score: 0, 
+        score: 0,
         timeTaken,
         status: "PENDING",
       },
@@ -409,9 +625,15 @@ export const submitExam = async (req, res) => {
       const attempted = selectedOptionId !== null;
       const isCorrect = attempted && selectedOptionId === correctOptionId;
 
-      if (isCorrect) correct++;
-      else if (attempted) incorrect++;
-      else skipped++;
+      if (isCorrect) {
+        correct++;
+        totalScore += 1;
+      } else if (attempted) {
+        incorrect++;
+        totalScore -= negativeMarkPerWrong;
+      } else {
+        skipped++;
+      }
 
       examAnswers.push({
         submissionId: submission.id,
@@ -440,7 +662,7 @@ export const submitExam = async (req, res) => {
     }
 
     // Calculate the score and status
-    const score = correct;
+    const score = Math.max(0, +totalScore.toFixed(2));
     const percentage = (score / totalQuestions) * 100;
     const passMark = exam.passingScore || 70;
     const status = percentage >= passMark ? "PASSED" : "FAILED";
@@ -469,6 +691,20 @@ export const submitExam = async (req, res) => {
       },
     });
 
+    const uniqueParticipants = await prisma.examSubmission.findMany({
+      where: { examId },
+      distinct: ["userId"],
+      select: { userId: true },
+    });
+    const participantCount = uniqueParticipants.length;
+
+    await prisma.exam.update({
+      where: { id: examId },
+      data: {
+        participants: participantCount,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Exam submitted successfully",
@@ -487,6 +723,7 @@ export const submitExam = async (req, res) => {
         percentage: +percentage.toFixed(2),
         status,
         timeTaken,
+        negativeMarking: negativeMarkPerWrong,
         review,
       },
     });
@@ -497,3 +734,228 @@ export const submitExam = async (req, res) => {
       .json({ success: false, message: "Internal Server Error" });
   }
 };
+
+export const updateExam = async (req, res) => {
+  const examId = parseInt(req.params.id);
+  const {
+    title,
+    description,
+    timeLimit,
+    passingScore,
+    type,
+    courseId,
+    paperId,
+    categoryId,
+    difficulty,
+    tags,
+    isPaid,
+    negativeMarking,
+  } = req.body;
+
+  try {
+    // Validate required fields
+    if (
+      !examId ||
+      !title ||
+      !timeLimit ||
+      !passingScore ||
+      !type ||
+      !courseId
+    ) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Validate type
+    const validTypes = [
+      "QUIZ",
+      "PRACTICE",
+      "MOCK",
+      "MCQ",
+      "FINAL",
+      "DESCRIPTIVE",
+      "MIXED",
+    ];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        error: `Invalid exam type. Valid types are: ${validTypes.join(", ")}`,
+      });
+    }
+
+    // Validate difficulty level (optional, but recommended)
+    const validDifficulties = ["EASY", "MEDIUM", "HARD"];
+    if (difficulty && !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({
+        error: `Invalid difficulty level. Valid options: ${validDifficulties.join(
+          ", "
+        )}`,
+      });
+    }
+
+    // Validate courseId
+    const course = await prisma.course.findUnique({
+      where: { id: parseInt(courseId) },
+    });
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+
+    // Validate categoryId if provided
+    if (categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: parseInt(categoryId) },
+      });
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+    }
+
+    // Validate paperId if provided
+    if (paperId) {
+      const paper = await prisma.examPaper.findUnique({
+        where: { id: parseInt(paperId) },
+      });
+      if (!paper) {
+        return res.status(404).json({ error: "Exam paper not found" });
+      }
+    }
+
+    const updatedExam = await prisma.exam.update({
+      where: { id: parseInt(examId) },
+      data: {
+        title,
+        description: description || "",
+        categoryId: categoryId ? parseInt(categoryId) : null,
+        difficulty: difficulty ? difficulty.toUpperCase() : undefined,
+        tags: tags || [],
+        negativeMarking: negativeMarking || 0,
+        timeLimit,
+        passingScore,
+        type: type.toUpperCase(),
+        courseId,
+        paperId: paperId || null,
+        isPaid: isPaid || false,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Exam updated successfully",
+      exam: updatedExam,
+    });
+  } catch (error) {
+    console.error("Error updating exam:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update exam",
+      details: error.message,
+    });
+  }
+};
+
+export const deleteExam = async (req, res) => {
+  const examId = parseInt(req.params.id);
+  try {
+    // Validate examId
+    if (!examId || isNaN(examId)) {
+      return res.status(400).json({ error: "Invalid exam ID" });
+    }
+
+    // Check if the exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+    });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    // Delete the exam
+    await prisma.exam.delete({
+      where: { id: examId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Exam deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting exam:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete exam",
+      details: error.message,
+    });
+  }
+};
+
+// export const getExamSubmissions = async (req, res) => {
+//   const { examId } = req.params;
+//   try {
+//     // Validate examId
+//     if (!examId || isNaN(parseInt(examId))) {
+//       return res.status(400).json({ error: "Invalid exam ID" });
+//     }
+
+//     const submissions = await prisma.examSubmission.findMany({
+//       where: { examId: parseInt(examId) },
+//       include: {
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             email: true,
+//           },
+//         },
+//       },
+//       orderBy: { createdAt: "desc" },
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Exam submissions fetched successfully",
+//       submissions,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching exam submissions:", err);
+//     res.status(500).json({
+//       success: false,
+//       error: "Failed to fetch exam submissions",
+//       details: err.message,
+//     });
+//   }
+// };
+// export const getExamActivities = async (req, res) => {
+//   const { examId } = req.params;
+//   try {
+//     // Validate examId
+//     if (!examId || isNaN(parseInt(examId))) {
+//       return res.status(400).json({ error: "Invalid exam ID" });
+//     }
+
+//     const activities = await prisma.examActivity.findMany({
+//       where: { examId: parseInt(examId) },
+//       include: {
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             email: true,
+//           },
+//         },
+//       },
+//       orderBy: { createdAt: "desc" },
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Exam activities fetched successfully",
+//       activities,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching exam activities:", err);
+//     res.status(500).json({
+//       success: false,
+//       error: "Failed to fetch exam activities",
+//       details: err.message,
+//     });
+//   }
+// };

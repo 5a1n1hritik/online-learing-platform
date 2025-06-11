@@ -15,6 +15,8 @@ import {
   ListTree,
   LayoutDashboard,
   Scale,
+  ChevronDown,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,9 +59,23 @@ import {
 } from "./ui/accordion";
 import { AnimatedResultFeedback } from "./AnimatedResultFeedback";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "./ui/sheet";
+
+const LANGUAGES = {
+  en: "English",
+  hi: "हिंदी",
+};
 
 const CoursesExams = () => {
-  const { courseId, examId } = useParams();
+  const { examId } = useParams();
   const [examData, setExamData] = useState([]);
   const [examStarted, setExamStarted] = useState(false);
   const [resultData, setResultData] = useState([]);
@@ -72,22 +88,18 @@ const CoursesExams = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
-  const [hasOngoingAttempt, setHasOngoingAttempt] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
   const timerRef = useRef(null);
   const questionsPerPage = 10;
-
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchExamDetails = async () => {
       try {
         const response = await API.get(`/exams/details/${examId}`);
-        console.log("Exam details response:", response.data);
         setExamData(response.data.exam);
         setTimeLeft(response.data.exam.timeLimit * 60);
       } catch (error) {
-        console.error("Failed to fetch quiz metadata", error.message);
         toast({
           title: "Invalid Quiz Metadata",
           description:
@@ -99,44 +111,17 @@ const CoursesExams = () => {
     fetchExamDetails();
   }, [examId]);
 
-  // const handleStartExam = async () => {
-  //   try {
-  //     const response = await API.post(`/exams/${examId}/start`);
-
-  //     const activityId = response.data.activity.id;
-
-  //     localStorage.setItem("activityId", activityId);
-
-  //     setExamStarted(true);
-  //     toast({
-  //       title: "Exam Started",
-  //       description: "You can now start answering the questions.",
-  //       variant: "success",
-  //     });
-  //   } catch (error) {
-  //     console.error("Failed to start exam", error.message);
-  //     toast({
-  //       title: "Error Starting Exam",
-  //       description: "There was an error starting the exam. Please try again.",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
-
   const handleStartExam = async () => {
     try {
       const checkResponse = await API.get(`/exams/${examId}/check-attempt`);
-      console.log("Check attempt response:", checkResponse.data);
       const { hasOngoingAttempt } = checkResponse.data;
 
       if (hasOngoingAttempt) {
-        setHasOngoingAttempt(true);
-        setShowResumeDialog(true); // Open the modal
+        setShowResumeDialog(true);
       } else {
-        await startExam(false); // No ongoing attempt, start fresh
+        await startExam(false);
       }
     } catch (error) {
-      console.error("Error checking exam attempt", error);
       toast({
         title: "Error",
         description: "Failed to check previous attempt.",
@@ -166,7 +151,6 @@ const CoursesExams = () => {
 
       setShowResumeDialog(false);
     } catch (error) {
-      console.error("Failed to start/resume exam", error.message);
       toast({
         title: "Error",
         description: error?.response?.data?.message || "Something went wrong.",
@@ -184,7 +168,6 @@ const CoursesExams = () => {
         timeTaken,
         activityId,
       });
-      console.log("Exam submission response:", response.data);
       setResultData(response.data);
       toast({
         title: "Exam Submitted",
@@ -192,7 +175,6 @@ const CoursesExams = () => {
         variant: "success",
       });
     } catch (error) {
-      console.error("Error in useEffect:", error.message);
       toast({
         title: "Error Submitting Exam",
         description:
@@ -245,18 +227,17 @@ const CoursesExams = () => {
     const q = qItem.question;
     return {
       id: q.id.toString(),
-      question: q[`question_${selectedLanguage}`], // Dynamic
+      question: q[`question_${selectedLanguage}`],
       options: q.options.map((opt) => ({
         id: opt.id.toString(),
         label: opt.label,
-        text: opt[`text_${selectedLanguage}`], // Dynamic
+        text: opt[`text_${selectedLanguage}`],
       })),
     };
   });
 
   const totalPages = Math.ceil(formattedQuestions.length / questionsPerPage);
 
-  // Handle answer selection for multiple choice and true/false
   const handleAnswerSelect = (questionId, answerId) => {
     setAnswers((prev) => ({
       ...prev,
@@ -299,7 +280,6 @@ const CoursesExams = () => {
       setIsProcessing(false);
       if (timerRef.current) clearInterval(timerRef.current);
     } catch (error) {
-      console.error("Error submitting exam:", error.message);
       setIsProcessing(false);
       toast({
         title: "Error Submitting Exam",
@@ -338,23 +318,40 @@ const CoursesExams = () => {
     return "countdown-timer text-green-500";
   };
 
-  const handleLanguageChange = (lang) => {
-    setSelectedLanguage(lang);
-  };
+  // Navigation functions
+  // Utility to generate dynamic pagination with ellipsis
+  const generatePagination = (currentPage, totalPages) => {
+    const pages = [];
 
-  //   // Navigation functions
+    if (totalPages <= 3) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+
+      if (currentPage > 2) pages.push("dots-start");
+
+      const start = Math.max(1, currentPage - 1);
+      const end = Math.min(totalPages - 2, currentPage + 1);
+
+      for (let i = start; i <= end; i++) pages.push(i);
+
+      if (currentPage < totalPages - 3) pages.push("dots-end");
+
+      pages.push(totalPages - 1);
+    }
+
+    return pages;
+  };
   const goToNextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
     }
   };
-
   const goToPreviousPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
     }
   };
-
   const goToPage = (page) => {
     setCurrentPage(page);
   };
@@ -392,14 +389,14 @@ const CoursesExams = () => {
   if (!examStarted) {
     return (
       <>
-        <div className="container max-w-4xl py-12">
+        <div className="container max-w-4xl py-8 px-4 sm:px-6">
           <Card className="animate-fade-in">
-            <CardHeader>
+            <CardHeader className="text-center">
               <CardTitle className="text-2xl">{examData.title}</CardTitle>
               <CardDescription>{examData.description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                 <div className="flex items-center gap-3 p-4 rounded-lg border">
                   <Timer className="h-6 w-6 text-sky-600" />
                   <div>
@@ -453,10 +450,9 @@ const CoursesExams = () => {
                   <div>
                     <p className="font-medium">Negative Marking</p>
                     <p className="text-sm text-muted-foreground">
-                      {/* {examData.negativeMarking
-                      ? `- ${examData.negativeMarking} per wrong answer`
-                      : "No negative marking"} */}
-                      No
+                      {examData.negativeMarking
+                        ? `- ${examData.negativeMarking} per wrong answer`
+                        : "No negative marking"}
                     </p>
                   </div>
                 </div>
@@ -487,37 +483,47 @@ const CoursesExams = () => {
                 </AlertDescription>
               </Alert>
               <p className="text-sm italic text-muted-foreground text-center">
-                The timer will start immediately after clicking “Start Exam”.
+                The timer will start immediately after clicking “Continue Exam”.
               </p>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild variant="outline">
-                <Link to={`/courses/${courseId}`}>Back to Course</Link>
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link to={`/globalExams`}>Go to Exams</Link>
               </Button>
-              <Button onClick={handleStartExam}>Start Exam</Button>
+              <Button onClick={handleStartExam} className="w-full sm:w-auto">
+                Continue Exam
+              </Button>
             </CardFooter>
           </Card>
         </div>
         {/* 🔹 Resume Confirmation Dialog */}
         <Dialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Resume Previous Attempt?</DialogTitle>
+          <DialogContent className="w-full max-w-[90vw] sm:max-w-md p-4 sm:p-6 rounded-lg">
+            <DialogHeader className="text-center sm:text-left">
+              <DialogTitle className="text-lg sm:text-xl font-semibold">
+                Resume Previous Attempt?
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-2 space-y-2">
+                You already have an unfinished attempt for this exam. Would you
+                like to resume it or start a new one?
+              </DialogDescription>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              You already have an unfinished attempt for this exam. Would you
-              like to resume it or start a new one?
-            </p>
-            <DialogFooter className="gap-2 pt-4">
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6">
               <Button
                 variant="outline"
                 onClick={() => startExam(false)}
                 disabled={resumeLoading}
+                className="w-full sm:w-auto"
               >
-                Start new exam
+                Start new one
               </Button>
-              <Button onClick={() => startExam(true)} disabled={resumeLoading}>
-                Continue old exam
+              <Button
+                onClick={() => startExam(true)}
+                disabled={resumeLoading}
+                className="w-full sm:w-auto"
+              >
+                Continue old one
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -618,29 +624,31 @@ const CoursesExams = () => {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Questions Review</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg sm:text-xl">
+                    Questions Review
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base">
                     Review your answers and see the correct solutions
                   </CardDescription>
                 </div>
-
-                {/* Language Selection Buttons inside Card */}
-                <div className="flex space-x-2">
-                  <Button
-                    variant={selectedLanguage === "en" ? "default" : "outline"}
-                    onClick={() => setSelectedLanguage("en")}
-                  >
-                    English
-                  </Button>
-                  <Button
-                    variant={selectedLanguage === "hi" ? "default" : "outline"}
-                    onClick={() => setSelectedLanguage("hi")}
-                  >
-                    हिन्दी
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-32 justify-between">
+                      {selectedLanguage === "en" ? "English" : "हिन्दी"}
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSelectedLanguage("en")}>
+                      English
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSelectedLanguage("hi")}>
+                      हिन्दी
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
 
               <CardContent>
@@ -719,7 +727,9 @@ const CoursesExams = () => {
                                         : option.text_hi}
                                       {isSelectedOption && (
                                         <span className="ml-2 italic text-muted-foreground text-xs">
-                                          (You selected) ( आपका उत्तर )
+                                          {selectedLanguage === "en"
+                                            ? "(You selected)"
+                                            : "(आपका उत्तर)"}
                                         </span>
                                       )}
                                     </span>
@@ -741,8 +751,9 @@ const CoursesExams = () => {
                             {/* If Unattempted */}
                             {!wasAttempted && (
                               <p className="text-sm font-bold text-muted-foreground italic mt-2">
-                                You did not answer this question. ( उत्तर नहीं
-                                दिया )
+                                {selectedLanguage === "en"
+                                  ? "Looks like you missed this one — no answer was selected."
+                                  : "लगता है आपने यह प्रश्न छोड़ दिया — कोई उत्तर नहीं चुना गया।"}
                               </p>
                             )}
                           </div>
@@ -754,11 +765,15 @@ const CoursesExams = () => {
               </CardContent>
             </Card>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button asChild variant="outline">
-              <Link to={`/courses/${courseId}`}>Back to Course</Link>
+          <CardFooter className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to={`/globalExams`}>Back to Exams</Link>
             </Button>
-            <Button disabled onClick={handleRetakeExam}>
+            <Button
+              disabled
+              onClick={handleRetakeExam}
+              className="w-full sm:w-auto"
+            >
               Retake Exam
             </Button>
           </CardFooter>
@@ -769,9 +784,8 @@ const CoursesExams = () => {
 
   return (
     <div className="container max-w-6xl py-12">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{examData.title}</h1>
-        {/* Language Toggle Buttons */}
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -781,30 +795,18 @@ const CoursesExams = () => {
                 className="flex items-center gap-2 h-8 px-3 text-xs"
               >
                 <Globe className="h-4 w-4" />
-                {{
-                  en: "English",
-                  hi: "हिंदी",
-                  bn: "বাংলা",
-                  mr: "मराठी",
-                }[selectedLanguage] || "Language"}
+                {LANGUAGES[selectedLanguage] || "Language"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Select Language</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {["en", "hi", "bn", "mr"].map((lang) => (
+              {Object.keys(LANGUAGES).map((lang) => (
                 <DropdownMenuItem
                   key={lang}
-                  onClick={() => handleLanguageChange(lang)}
+                  onClick={() => setSelectedLanguage(lang)}
                 >
-                  {
-                    {
-                      en: "English",
-                      hi: "हिंदी",
-                      bn: "বাংলা",
-                      mr: "मराठी",
-                    }[lang]
-                  }
+                  {LANGUAGES[lang]}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -818,205 +820,320 @@ const CoursesExams = () => {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-6">
-        <div className="flex justify-between text-sm mb-2">
-          <span>
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <span>
-            {getAnsweredCount()} of {questions.length} answered
-          </span>
-        </div>
-        <Progress
-          value={(getAnsweredCount() / questions.length) * 100}
-          className="h-2"
-        />
-      </div>
+      {/* Layout Split */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Panel */}
+        <div className="flex-1">
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span>
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <span>
+                {getAnsweredCount()} of {questions.length} answered
+              </span>
+            </div>
+            <Progress
+              value={(getAnsweredCount() / questions.length) * 100}
+              className="h-2"
+            />
 
-      {/* Exam Question Card */}
-      <Card className="animate-fade-in mb-6">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            Questions {currentPage * questionsPerPage + 1} -{" "}
-            {Math.min((currentPage + 1) * questionsPerPage, questions.length)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {formattedQuestions
-            .slice(
-              currentPage * questionsPerPage,
-              (currentPage + 1) * questionsPerPage
-            )
-            .map((question, index) => (
-              <div key={question.id} className="p-4 mb-6 rounded-lg border">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-medium text-base">
-                    Question {currentPage * questionsPerPage + index + 1}
-                  </h3>
-                  {answers[question.id] && (
-                    <Badge variant="outline">Answered</Badge>
-                  )}
-                </div>
-                <p className="mb-4 text-lg">{question.question}</p>
+            {/* Mobile Sidebar Trigger */}
+            <div className="lg:hidden flex justify-center w-full mt-6">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className=" animate-fade-in w-full py-2 px-4 text-sm"
+                    style={{ animationDelay: "0.5s" }}
+                  >
+                    <Menu className="h-5 w-5" />
+                    Question Overview
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[80vw] max-w-sm">
+                  <SheetHeader>
+                    <SheetTitle className="text-lg font-bold gradient-heading">
+                      Question Overview
+                    </SheetTitle>
+                    <SheetDescription className="text-sm text-muted-foreground mt-2 border-b pb-4">
+                      Review your answers and navigate through the questions
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="grid grid-cols-5 gap-4 mt-8">
+                    {questions.map((question, index) => {
+                      const isAnswered = !!answers[question.id];
+                      const page = Math.floor(index / questionsPerPage);
+                      const isCurrentPage = page === currentPage;
 
-                <RadioGroup
-                  value={answers[question.id] || ""}
-                  onValueChange={(value) =>
-                    handleAnswerSelect(question.id, value)
-                  }
-                >
-                  <div className="space-y-3">
-                    {question.options?.map((opt) => (
-                      <div
-                        key={opt.id}
-                        className={`quiz-option flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors ${
-                          answers[question.id] === opt.id
-                            ? "selected bg-muted"
-                            : ""
-                        }`}
-                      >
-                        <RadioGroupItem
-                          value={opt.id}
-                          id={`${question.id}-${opt.id}`}
-                          className="mr-3"
-                        />
-                        <Label
-                          htmlFor={`${question.id}-${opt.id}`}
-                          className="flex-1 cursor-pointer"
+                      let bgColor = isAnswered
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-300 text-black";
+                      let borderRing = isCurrentPage
+                        ? "ring-2 ring-blue-600"
+                        : "";
+
+                      return (
+                        <button
+                          key={question.id}
+                          onClick={() => goToPage(page)}
+                          className={`w-10 h-10 rounded text-sm font-semibold ${bgColor} ${borderRing} hover:opacity-90 transition`}
+                          aria-label={`Go to question ${index + 1}`}
                         >
-                          {opt.text}
-                        </Label>
-                      </div>
-                    ))}
+                          {index + 1}
+                        </button>
+                      );
+                    })}
                   </div>
-                </RadioGroup>
-              </div>
-            ))}
-        </CardContent>
-      </Card>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between items-center mb-6">
-        <Button
-          variant="outline"
-          onClick={goToPreviousPage}
-          disabled={currentPage === 0}
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Previous
-        </Button>
+                  {/* Legend */}
+                  <div className="flex flex-col sm:flex-row sm:gap-6 gap-3 mt-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-green-500" />
+                      <span>Answered</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-gray-300 border" />
+                      <span>Unanswered</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border-2 border-blue-600" />
+                      <span>Current Page</span>
+                    </div>
+                  </div>
 
-        <div className="flex gap-2">
-          {Array.from({ length: totalPages }, (_, i) => (
+                  <SheetFooter className="border-t pt-2 mt-8">
+                    <div className=" mt-4">
+                      <Button asChild className="w-full">
+                        <Link to="/globalExams">Back to Exams</Link>
+                      </Button>
+                    </div>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+
+          {/* exam card */}
+          <Card className="animate-fade-in mb-6">
+            <CardHeader>
+              <CardTitle className="text-xl">
+                Questions {currentPage * questionsPerPage + 1} -{" "}
+                {Math.min(
+                  (currentPage + 1) * questionsPerPage,
+                  questions.length
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {formattedQuestions
+                .slice(
+                  currentPage * questionsPerPage,
+                  (currentPage + 1) * questionsPerPage
+                )
+                .map((question, index) => (
+                  <div key={question.id} className="p-4 mb-6 rounded-lg border">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="font-medium text-base">
+                        Question {currentPage * questionsPerPage + index + 1}
+                      </h3>
+                      {answers[question.id] && (
+                        <Badge variant="outline">Answered</Badge>
+                      )}
+                    </div>
+                    <p className="mb-4 text-lg">{question.question}</p>
+
+                    <RadioGroup
+                      name={`question-${question.id}`}
+                      value={answers[question.id] || ""}
+                      onValueChange={(value) =>
+                        handleAnswerSelect(question.id, value)
+                      }
+                    >
+                      <div className="space-y-3">
+                        {question.options?.map((opt) => (
+                          <div
+                            key={opt.id}
+                            className={`quiz-option flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors ${
+                              answers[question.id] === opt.id
+                                ? "selected bg-muted"
+                                : ""
+                            }`}
+                          >
+                            <RadioGroupItem
+                              value={opt.id}
+                              id={`${question.id}-${opt.id}`}
+                              className="mr-3"
+                            />
+                            <Label
+                              htmlFor={`${question.id}-${opt.id}`}
+                              className="flex-1 cursor-pointer"
+                            >
+                              {opt.text}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          {/* Navigation */}
+          <div className="flex flex-row justify-between items-center gap-4 mb-6">
             <Button
-              key={i}
-              variant={currentPage === i ? "default" : "outline"}
-              size="sm"
-              onClick={() => goToPage(i)}
-              className="w-10 h-10 p-0"
+              variant="ghost"
+              onClick={goToPreviousPage}
+              disabled={currentPage === 0}
+              className="px-3 h-10"
             >
-              {i + 1}
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Prev
             </Button>
-          ))}
+
+            {/* Pagination Numbers */}
+            <div className="hidden sm:flex items-center gap-2 text-sm">
+              {generatePagination(currentPage, totalPages).map((page, index) =>
+                typeof page === "string" ? (
+                  <span key={index} className="px-1 text-muted-foreground">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`relative px-2 py-1 rounded-md text-sm font-medium transition-all ${
+                      currentPage === page
+                        ? "text-accent-foreground"
+                        : "text-muted-foreground hover:text-accent-foreground"
+                    }`}
+                  >
+                    {page + 1}
+                    {currentPage === page && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent rounded-full" />
+                    )}
+                  </button>
+                )
+              )}
+            </div>
+
+            <span className="text-sm font-medium sm:hidden">
+              Page {currentPage + 1} of {totalPages}
+            </span>
+
+            {currentPage < totalPages - 1 ? (
+              <Button
+                variant="ghost"
+                onClick={goToNextPage}
+                className="px-3 h-10"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Dialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
+                <DialogTrigger asChild>
+                  <Button className="px-3 h-10">Submit Exam</Button>
+                </DialogTrigger>
+                <DialogContent className="w-full max-w-[90vw] sm:max-w-md p-4 sm:p-6 rounded-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-center font-bold text-2xl sm:text-left">
+                      Submit Exam
+                    </DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="space-y-3 text-sm text-muted-foreground mt-2">
+                        <p>
+                          Are you sure you want to submit your exam? Once
+                          submitted, you can't change your answers.
+                        </p>
+                        <p>
+                          You have answered {getAnsweredCount()} out of{" "}
+                          {examData?.paper?.questions?.length ?? 0} questions.
+                        </p>
+                        {examData?.paper?.questions &&
+                          getAnsweredCount() <
+                            examData.paper.questions.length && (
+                            <p className="text-yellow-600 font-medium">
+                              ⚠️ Warning: You have{" "}
+                              {examData.paper.questions.length -
+                                getAnsweredCount()}{" "}
+                              unanswered questions.
+                            </p>
+                          )}
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setConfirmSubmit(false)}
+                      className="w-full sm:w-auto"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSubmitExam}
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto"
+                    >
+                      {isProcessing ? "Submitting..." : "Submit"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
 
-        {currentPage < totalPages - 1 ? (
-          <Button onClick={goToNextPage}>
-            Next
-            <ChevronRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <Dialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
-            <DialogTrigger asChild>
-              <Button>Submit Exam</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Submit Exam</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to submit your exam? Once you submit the
-                  exam, you cannot change your answers. Make sure to review all
-                  questions before submitting.
-                  <br />
-                  You have answered {getAnsweredCount()} out of{" "}
-                  {examData?.paper?.questions?.length ?? 0} questions.
-                  {examData?.paper?.questions &&
-                    getAnsweredCount() < examData.paper.questions.length && (
-                      <span className="block mt-2 text-yellow-600">
-                        ⚠️ Warning: You have{" "}
-                        {examData.paper.questions.length - getAnsweredCount()}{" "}
-                        unanswered questions.
-                      </span>
-                    )}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setConfirmSubmit(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmitExam}>Submit</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+        {/* Right Panel (Sidebar for mobile) */}
+        <div className="hidden lg:block w-full lg:w-[300px]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Question Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-2">
+                {questions.map((question, index) => {
+                  const isAnswered = !!answers[question.id];
+                  const page = Math.floor(index / questionsPerPage);
+                  const isCurrentPage = page === currentPage;
 
-      {/* Question Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Question Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-            {questions.map((question, index) => {
-              const isAnswered = !!answers[question.id];
-              const page = Math.floor(index / questionsPerPage);
-              const isCurrentPage = page === currentPage;
+                  let bgColor = isAnswered
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-300 text-black";
+                  let borderRing = isCurrentPage ? "ring-2 ring-blue-600" : "";
 
-              let variant = "secondary";
-              if (isCurrentPage) variant = "default";
-              else if (isAnswered) variant = "outline";
+                  return (
+                    <button
+                      key={question.id}
+                      onClick={() => goToPage(page)}
+                      className={`w-10 h-10 rounded text-sm font-semibold ${bgColor} ${borderRing} hover:opacity-90 transition`}
+                      aria-label={`Go to question ${index + 1}`}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
 
-              return (
-                <Button
-                  key={question.id}
-                  variant={variant}
-                  size="sm"
-                  className="w-10 h-10 p-0"
-                  onClick={() => goToPage(page)}
-                >
-                  {index + 1}
-                </Button>
-              );
-            })}
-          </div>
-
-          <div className="flex gap-4 mt-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-primary rounded"></div>
-              <span>Current Page</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border border-input rounded"></div>
-              <span>Answered</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-secondary rounded"></div>
-              <span>Unanswered</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div>
-        <div className="mt-4">
-          <Button asChild className="w-full">
-            <Link to={`/courses/${courseId}`}>Back to Course</Link>
-          </Button>
+              {/* Legend */}
+              <div className="flex flex-col gap-3 mt-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-green-500" />
+                  <span>Answered</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-gray-300 border" />
+                  <span>Unanswered</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded border-2 border-blue-600" />
+                  <span>Current Page</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

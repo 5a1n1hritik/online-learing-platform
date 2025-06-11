@@ -50,7 +50,7 @@ const routes = [
     authOnly: false,
   },
   {
-    href: "/Exams",
+    href: "/globalExams",
     label: "Exams",
     icon: FileText,
     authOnly: false,
@@ -70,7 +70,6 @@ const routes = [
     hideWhenAuthenticated: true,
   },
 ];
-
 
 const secondaryNavItems = [
   {

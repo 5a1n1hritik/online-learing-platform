@@ -12,6 +12,8 @@ import CourseDetails from "./page/CourseDetails";
 import CourseQuiz from "./components/CourseQuiz";
 import CoursesExams from "./components/CoursesExams";
 import { Toaster } from "./components/ui/toaster";
+import GlobalExams from "./page/GlobalExams";
+import ExamScreen from "./components/ExamScreen";
 
 function App() {
   const location = useLocation();
@@ -31,6 +33,8 @@ function App() {
         <Route path="/courses/:id" element={<CourseDetails />} />
         <Route path="/courses/:courseId/quiz/:quizId" element={<CourseQuiz />} />
         <Route path="/courses/:courseId/exam/:examId" element={<CoursesExams />} />
+        <Route path="/globalexams" element={<GlobalExams />} />
+        <Route path="/globalexams/:examId/start" element={<ExamScreen />} />
       </Routes>
 
       <Toaster />
