@@ -6,12 +6,14 @@ import {
   getAllCourses,
   getCourseDetails,
   getCourseProgress,
+  getCourseReview,
   getEnrolledCourses,
   getInstructorCourses,
   getInstructorCoursesById,
   submitReview,
   unenrollFromCourse,
   updateCourse,
+  voteReview,
 } from "../controllers/course.controller.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
@@ -26,6 +28,10 @@ router.delete("/delete/:id", verifyToken, deleteCourse);
 router.post("/enroll/:id", verifyToken, enrollInCourse); 
 router.delete("/:id/unenroll", verifyToken, unenrollFromCourse); 
 router.post("/:id/review", verifyToken, submitReview); 
+
+router.get("/:courseId/reviews", getCourseReview);
+router.post("/reviews/:reviewId/vote", voteReview);
+
 router.get("/:id/progress", verifyToken, getCourseProgress); 
 router.post("/:id/progress", verifyToken, getCourseProgress); 
 

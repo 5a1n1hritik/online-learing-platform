@@ -160,6 +160,9 @@ export const getQuizByCourse = async (req, res) => {
       where: {
         courseId: parseInt(courseId),
       },
+      include: {
+        questions: true,
+      },
     });
 
     if (quizzes.length === 0) {
@@ -331,12 +334,12 @@ export const submitQuiz = async (req, res) => {
         userAnswers: {
           create: answerRecords.map((ans) => ({
             question: { connect: { id: ans.questionId } },
-            selectedOption: { connect: { id: ans.selectedOption } },  
+            selectedOption: { connect: { id: ans.selectedOption } },
             isCorrect: ans.isCorrect,
           })),
         },
       },
-    });    
+    });
 
     res.status(201).json({
       success: true,

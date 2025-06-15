@@ -19,7 +19,7 @@ const EnrollButton = ({ courseId, courseTitle, courseDetails, className }) => {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 2,
-    }).format(price || 999);
+    }).format(price);
   };
 
   useEffect(() => {
@@ -54,12 +54,13 @@ const EnrollButton = ({ courseId, courseTitle, courseDetails, className }) => {
 
   const enrollInCourse = async () => {
     try {
-      setIsEnrolling(true);
+      setIsEnrolling(false);
       const response = await API.post(`/courses/enroll/${courseId}`);
       setIsEnrolled(true);
       toast({
-        title: "Enrolled Successfully 🎉",
-        description: response.data.message || "Welcome! You're now enrolled in this course.",
+        title: "Successfully enrolled!",
+          description: `You have been enrolled in "${courseTitle}". Start learning now!`,
+          duration: 5000,
       });
     } catch (err) {
       toast({
@@ -92,12 +93,13 @@ const EnrollButton = ({ courseId, courseTitle, courseDetails, className }) => {
 
   const handleClick = () => {
     if (isEnrolled || isEnrolling) return;
-    if (courseDetails.isFree) {
-      enrollInCourse();
+  
+    if (courseDetails.isPaid) {
+      setShowPaymentModal(true); // 💰 Paid → show payment modal
     } else {
-      setShowPaymentModal(true);
+      enrollInCourse(); // ✅ Free → enroll directly
     }
-  };
+  };  
 
   const renderButtonLabel = () => {
     if (loading)
@@ -122,7 +124,7 @@ const EnrollButton = ({ courseId, courseTitle, courseDetails, className }) => {
     }
 
     const formattedPrice = formatPriceINR(courseDetails.price);
-    return `Enroll ${!courseDetails.isFree ? `• ${formattedPrice}` : "Now"}`;
+    return `Enroll ${courseDetails.isPaid ? `• ${formattedPrice}` : "Now"}`;
   };
 
   return (

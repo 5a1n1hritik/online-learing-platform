@@ -82,6 +82,7 @@ model User {
   role              Role               @default(STUDENT)
   avatarUrl         String?
   bio               String?
+  isVerified        Boolean            @default(false)
   courses           Enrollment[]
   instructedCourses Course[]           @relation("UserToCourses")
   quizSubmissions   QuizSubmission[]
@@ -110,7 +111,7 @@ model Course {
   title          String
   description    String
   price          Float
-  isFree         Boolean          @default(false)
+  isPaid         Boolean          @default(false)
   imageUrl       String
   rating         Float            @default(0)
   studentsCount  Int              @default(0)
@@ -163,14 +164,20 @@ model CourseProgress {
 }
 
 model CourseReview {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  course    Course   @relation(fields: [courseId], references: [id])
-  courseId  Int
-  rating    Int // 1–5
-  comment   String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  course     Course   @relation(fields: [courseId], references: [id])
+  courseId   Int
+
+  rating     Int       // 1–5
+  comment    String?    // Optional written review
+  helpful    Int       @default(0) 
+  unhelpful  Int       @default(0)
+
+  pinned     Boolean    @default(false) // ⭐ Highlight top review
+  verified   Boolean    @default(false) // ✅ Mark if user enrolled & completed part
+  createdAt  DateTime   @default(now())
 
   @@unique([userId, courseId])
 }
