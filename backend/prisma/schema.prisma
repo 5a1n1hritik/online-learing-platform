@@ -233,6 +233,8 @@ model Quiz {
   questions    QuizQuestion[]
   submissions  QuizSubmission[]
   lessons      Lesson[] // add this if back reference is needed
+  maxAttempts  Int      @default(3)
+  dueDate      DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 }

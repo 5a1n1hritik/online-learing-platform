@@ -59,6 +59,7 @@ import { modules } from "@/data/modules";
 const CourseDetails = () => {
   const { id: courseId } = useParams();
   const [course, setCourse] = useState(null);
+  const [quizzes, setQuizzes] = useState([]);
   const [ratingFilter, setRatingFilter] = useState(null);
   const [sortOption, setSortOption] = useState("recent");
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,6 +102,21 @@ const CourseDetails = () => {
   useEffect(() => {
     fetchCourseDetails();
   }, [courseId, ratingFilter, sortOption, currentPage]);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setLoading(true);
+      try {
+        const response = await API.get(`/quizzes/course/${courseId}`);
+        setQuizzes(response.data.quizzes);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, [courseId]);
 
   const handleRate = (star) => setUserRating(star);
   const handleSubmitReview = async () => {
@@ -488,7 +504,10 @@ const CourseDetails = () => {
                             <span>Course Progress</span>
                             <span>{overallProgress ?? 0}%</span>
                           </div>
-                          <Progress value={overallProgress ?? 0} className="h-2" />
+                          <Progress
+                            value={overallProgress ?? 0}
+                            className="h-2"
+                          />
                         </div>
 
                         {/* Action Buttons */}
@@ -694,13 +713,13 @@ const CourseDetails = () => {
                     <HelpCircle className="h-5 w-5 text-blue-500" />
                     <h3 className="text-xl font-semibold">Quizzes</h3>
                   </div>
-                  {course.quizzes.length === 0 ? (
+                  {quizzes.length === 0 ? (
                     <div>
                       <p>No quizzes available yet!</p>
                     </div>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2">
-                      {course.quizzes.map((quiz) => (
+                      {quizzes.map((quiz) => (
                         <Card
                           key={quiz.id}
                           className={`border ${
@@ -745,15 +764,56 @@ const CourseDetails = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Calendar className="h-4 w-4 text-muted-foreground" />
-
                                   <span>
-                                    Date:{" "}
+                                    Due:{" "}
                                     {new Date(
-                                      quiz.createdAt
+                                      quiz.dueDate
                                     ).toLocaleDateString()}
                                   </span>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span>
+                                    Attempts: {quiz.attemptsLeft}/
+                                    {quiz.maxAttempts}
+                                  </span>
+                                </div>
                               </div>
+
+                              {quiz.completed && (
+                                <div className="bg-muted/30 p-3 rounded-md">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">
+                                      Your Score
+                                    </span>
+                                    <span className="text-sm font-bold">
+                                      {quiz.score}/
+                                      {Math.round(
+                                        (quiz.score / quiz.scorePercentage) *
+                                          100
+                                      )}{" "}
+                                      ({quiz.scorePercentage}%)
+                                    </span>
+                                  </div>
+
+                                  <Progress
+                                    value={quiz.scorePercentage}
+                                    className="h-2 mt-2 relative overflow-hidden bg-muted"
+                                  >
+                                    <div
+                                      className="absolute top-0 left-0 h-full transition-all duration-300"
+                                      style={{
+                                        width: `${quiz.scorePercentage}%`,
+                                        backgroundColor:
+                                          quiz.scorePercentage >=
+                                          quiz.passingScore
+                                            ? "#22c55e"
+                                            : "#f59e0b",
+                                      }}
+                                    />
+                                  </Progress>
+                                </div>
+                              )}
 
                               <div className="flex justify-end">
                                 {quiz.locked ? (

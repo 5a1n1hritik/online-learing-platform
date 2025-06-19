@@ -2,7 +2,8 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const createQuiz = async (req, res) => {
-  const { title, timeLimit, passingScore, courseId } = req.body;
+  const { title, timeLimit, passingScore, courseId, dueDate, maxAttempts } =
+    req.body;
 
   if (!title || !timeLimit || !passingScore || !courseId) {
     return res
@@ -29,6 +30,8 @@ export const createQuiz = async (req, res) => {
         timeLimit,
         passingScore,
         courseId,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        maxAttempts: maxAttempts ?? 3,
       },
     });
     res.status(201).json({
@@ -101,7 +104,7 @@ export const getQuizById = async (req, res) => {
 
 export const updateQuiz = async (req, res) => {
   const { id } = req.params;
-  const { title, timeLimit, passingScore } = req.body;
+  const { title, timeLimit, passingScore, dueDate, maxAttempts } = req.body;
 
   try {
     const quiz = await prisma.quiz.update({
@@ -112,6 +115,8 @@ export const updateQuiz = async (req, res) => {
         title,
         timeLimit,
         passingScore,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        maxAttempts,
       },
     });
 
@@ -153,6 +158,7 @@ export const deleteQuiz = async (req, res) => {
 };
 
 export const getQuizByCourse = async (req, res) => {
+  const userId = req.user.id;
   const { courseId } = req.params;
 
   try {
@@ -161,21 +167,83 @@ export const getQuizByCourse = async (req, res) => {
         courseId: parseInt(courseId),
       },
       include: {
-        questions: true,
+        questions: {
+          include: {
+            options: true,
+          },
+        },
+        submissions: {
+          where: { userId },
+          orderBy: {
+            submittedAt: "desc",
+          },
+        },
       },
     });
 
-    if (quizzes.length === 0) {
+    if (!quizzes || quizzes.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No quizzes found for this course",
       });
     }
 
+    const now = new Date();
+    const enrichedQuizzes = quizzes.map((quiz) => {
+      const maxAttempts = quiz.maxAttempts ?? 3;
+      const totalAttempts = quiz.submissions.length;
+      const attemptsLeft = Math.max(0, maxAttempts - totalAttempts);
+
+      const completed = quiz.submissions.length > 0;
+      const lastSubmission = quiz.submissions[0];
+      const totalQuestions = quiz.questions.length;
+      const score = lastSubmission?.score ?? 0;
+      const scorePercentage = totalQuestions
+        ? Math.round((score / totalQuestions) * 100)
+        : 0;
+
+      const createdAt = new Date(quiz.createdAt);
+      const dueDate = quiz.dueDate ? new Date(quiz.dueDate) : null;
+
+      const locked =
+        now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000 ||
+        attemptsLeft <= 0 ||
+        (dueDate && now > dueDate);
+
+      return {
+        id: quiz.id,
+        title: quiz.title,
+        timeLimit: quiz.timeLimit,
+        passingScore: quiz.passingScore,
+        dueDate: quiz.dueDate,
+        maxAttempts: maxAttempts,
+        createdAt: quiz.createdAt,
+        updatedAt: quiz.updatedAt,
+        completed,
+        locked,
+        attemptsLeft,
+        score,
+        scorePercentage,
+        questions: quiz.questions.map((q) => ({
+          id: q.id,
+          question_en: q.question_en,
+          question_hi: q.question_hi,
+          difficulty: q.difficulty,
+          options: q.options.map((opt) => ({
+            id: opt.id,
+            label: opt.label,
+            text_en: opt.text_en,
+            text_hi: opt.text_hi,
+            isCorrect: opt.isCorrect,
+          })),
+        })),
+      };
+    });
+
     res.status(200).json({
       success: true,
       message: "Quizzes fetched successfully",
-      quiz: quizzes,
+      quizzes: enrichedQuizzes,
     });
   } catch (error) {
     console.error("Error fetching quizzes:", error);
@@ -325,6 +393,29 @@ export const submitQuiz = async (req, res) => {
       });
     }
 
+    if (quiz.maxAttempts) {
+      const attempts = await prisma.quizSubmission.count({
+        where: {
+          quizId,
+          userId,
+        },
+      });
+
+      if (attempts >= quiz.maxAttempts) {
+        return res.status(403).json({
+          success: false,
+          message: "Maximum attempts reached",
+        });
+      }
+    }
+
+    if (quiz.dueDate && new Date() > quiz.dueDate) {
+      return res.status(403).json({
+        success: false,
+        message: "Quiz is locked due to passed deadline",
+      });
+    }
+
     const submission = await prisma.quizSubmission.create({
       data: {
         user: { connect: { id: userId } },
@@ -355,12 +446,16 @@ export const submitQuiz = async (req, res) => {
 
 export const getUserQuizResult = async (req, res) => {
   try {
-    const { quizId, userId } = req.params;
+    const userId = req.user.id;
+    const { quizId } = req.params;
 
     const submission = await prisma.quizSubmission.findFirst({
       where: {
         quizId: parseInt(quizId),
         userId: parseInt(userId),
+      },
+      orderBy: {
+        submittedAt: "desc",
       },
       include: {
         quiz: true,

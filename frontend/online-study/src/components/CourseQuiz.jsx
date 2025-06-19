@@ -4,6 +4,12 @@ import {
   CheckCircle,
   Clock,
   HelpCircle,
+  LayoutDashboard,
+  ListCheck,
+  ListTree,
+  Medal,
+  Scale,
+  Timer,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -53,8 +59,8 @@ const CourseQuiz = () => {
     const fetchQuizzes = async () => {
       try {
         const response = await API.get(`/quizzes/course/${courseId}`);
-        setQuizData(response.data.quiz[0]);
-        setTimeLeft(response.data.quiz[0].timeLimit * 60);
+        setQuizData(response.data.quizzes[0]);
+        setTimeLeft(response.data.quizzes[0].timeLimit * 60);
       } catch (error) {
         console.error("Failed to fetch quiz metadata", error.message);
       }
@@ -198,44 +204,108 @@ const CourseQuiz = () => {
 
   if (!quizStarted) {
     return (
-      <div className="container max-w-4xl py-12">
+      <div className="container max-w-4xl py-8 px-4 sm:px-6">
         <Card className="animate-fade-in">
-          <CardHeader>
-            <CardTitle className="text-2xl">{quizData.title}</CardTitle>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl gradient-heading">{quizData.title}</CardTitle>
             <CardDescription>{quizData.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                <span>Time Limit: {quizData.timeLimit} minutes</span>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <Timer className="h-6 w-6 text-sky-600" />
+                <div>
+                  <p className="font-medium">Time Limit</p>
+                  <p className="text-sm text-muted-foreground">
+                    {quizData.timeLimit} minutes
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-muted-foreground" />
-                <span>Passing Score: {quizData.passingScore}%</span>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <Medal className="h-6 w-6 text-emerald-600" />
+                <div>
+                  <p className="font-medium">Passing Score</p>
+                  <p className="text-sm text-muted-foreground">
+                    {quizData.passingScore}%
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                <span>Total Questions: {questions.length}</span>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <ListCheck className="h-6 w-6 text-indigo-600" />
+                <div>
+                  <p className="font-medium">Total Questions</p>
+                  <p className="text-sm text-muted-foreground">
+                    {questions.length} questions
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <ListTree className="h-6 w-6 text-pink-600" />
+                <div>
+                  <p className="font-medium">Question Type</p>
+                  <p className="text-sm text-muted-foreground">MCQ only</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <LayoutDashboard className="h-6 w-6 text-yellow-600" />
+                <div>
+                  <p className="font-medium">Types</p>
+                  <p className="text-sm text-muted-foreground">
+                    Quiz Test only
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg border">
+                <Scale className="h-6 w-6 text-red-600" />
+                <div>
+                  <p className="font-medium">Negative Marking</p>
+                  <p className="text-sm text-muted-foreground">
+                    No negative marking
+                  </p>
+                </div>
               </div>
             </div>
 
             <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Important</AlertTitle>
-              <AlertDescription>
-                Once you start the quiz, the timer will begin. You must complete
-                all questions within the time limit. You can navigate between
-                questions, but the quiz will automatically submit when time runs
-                out.
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <AlertTitle className="text-base font-semibold">
+                Quiz Instructions
+              </AlertTitle>
+              <AlertDescription className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <ul className="list-disc list-inside space-y-1">
+                  <li>All questions are in MCQ format</li>
+                  <li>
+                    You can navigate between question and review your answers
+                  </li>
+                  <li>
+                    <span className="text-red-600 font-medium">
+                      ⚠ The quiz will auto-submit when the time runs out
+                    </span>
+                  </li>
+                  <li>Make sure to answer all questions before submitting</li>
+                  <li>
+                    Once you start the quiz, the timer will begin and you must
+                    complete the quiz within the allotted time
+                  </li>
+                </ul>
               </AlertDescription>
             </Alert>
+            <p className="text-sm italic text-muted-foreground text-center">
+              The timer will start immediately after clicking “Continue Quiz.
+            </p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild variant="outline">
-              <Link to={`/courses/${courseId}`}>Back to Course</Link>
+            <Link to={`/courses/${courseId}`}>
+              <Button variant="outline" className="w-full sm:w-auto">
+                Back to Course
+              </Button>
+            </Link>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => setQuizStarted(true)}
+            >
+              Continue Quiz
             </Button>
-            <Button onClick={() => setQuizStarted(true)}>Start Quiz</Button>
           </CardFooter>
         </Card>
       </div>

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Quiz" ADD COLUMN     "dueDate" TIMESTAMP(3),
+ADD COLUMN     "maxAttempts" INTEGER NOT NULL DEFAULT 3;

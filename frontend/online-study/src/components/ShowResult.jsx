@@ -139,7 +139,7 @@ const ShowResult = ({
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-gray-500">
-                      {/* {unattemptedQuestions} */}TODO:not set
+                      {unattemptedQuestions}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Unattempted
