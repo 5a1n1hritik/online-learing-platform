@@ -4,78 +4,94 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;  
+    --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 174 75% 42%;
-    --primary-foreground: 355 100% 100%;
-    --secondary: 174 75% 95%;
+
+    /* Blue primary */
+    --primary: 220 90% 56%; /* blue-600 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 100% 97%; /* light lavender */
     --secondary-foreground: 240 5.9% 10%;
+
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 346 100% 66%;
-    --accent-foreground: 355 100% 100%;
+
+    /* Purple accent */
+    --accent: 265 90% 65%; /* purple-500 */
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 174 75% 42%;
+    --ring: 220 90% 56%;
     --radius: 1rem;
-  
+
     --chart-1: 0.646 0.222 41.116;
     --chart-2: 0.6 0.118 184.704;
     --chart-3: 0.398 0.07 227.392;
     --chart-4: 0.828 0.189 84.429;
     --chart-5: 0.769 0.188 70.08;
-  
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-primary: 220 90% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 100% 97%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 265 80% 67%;
   }
-  
+
   .dark {
-    --background: 20 14.3% 4.1%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 95%;
-    --card: 24 9.8% 10%;
+    --card: 240 8% 12%;
     --card-foreground: 0 0% 95%;
-    --popover: 0 0% 9%;
+    --popover: 240 8% 10%;
     --popover-foreground: 0 0% 95%;
-    --primary: 174 75% 42%;
-    --primary-foreground: 355 100% 100%;
-    --secondary: 240 3.7% 15.9%;
+
+    /* Blue primary */
+    --primary: 220 90% 66%; /* lighter blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 25% 20%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
+
+    --muted: 240 5% 20%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 346 100% 66%;
-    --accent-foreground: 355 100% 100%;
+
+    /* Purple accent */
+    --accent: 265 85% 75%;
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 174 75% 42%;
-  
-    --chart-1: 0.488 0.243 264.376;
-    --chart-2: 0.696 0.17 162.48;
-    --chart-3: 0.769 0.188 70.08;
-    --chart-4: 0.627 0.265 303.9;
-    --chart-5: 0.645 0.246 16.439;
-  
-    --sidebar-background: 240 5.9% 10%;
+
+    --border: 240 4% 20%;
+    --input: 240 4% 20%;
+    --ring: 220 90% 66%;
+
+    --chart-1: 240 80% 60%;
+    --chart-2: 265 70% 75%;
+    --chart-3: 220 50% 50%;
+    --chart-4: 270 80% 60%;
+    --chart-5: 245 70% 50%;
+
+    --sidebar-background: 240 4.8% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 220 90% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 270 25% 20%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 265 80% 67%;
   }
 }
 
@@ -384,12 +400,14 @@
   position: absolute;
   width: 500px;
   height: 500px;
-  background: linear-gradient(180deg, rgba(32, 201, 151, 0.1) 0%, rgba(255, 107, 129, 0.1) 100%);
+  background: linear-gradient(180deg, rgba(32, 201, 151, 0.2) 0%, rgba(255, 107, 129, 0.2) 100%);
   border-radius: 43% 57% 70% 30% / 30% 43% 57% 70%;
   transform: translate(-50%, -50%);
   animation: blob 15s infinite ease-in-out;
   opacity: 0.5;
-  z-index: -1;
+  z-index: 0;
+  mix-blend-mode: lighten;
+  pointer-events: none;
 }
 
 @keyframes blob {
