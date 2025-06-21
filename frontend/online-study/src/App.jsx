@@ -1,12 +1,12 @@
 import React from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import Register from "./components/Register";
-import Login from "./components/Login";
+import Register from "./page/Register";
+import Login from "./page/Login";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import Home from "./page/Home";
-import Footer from "./components/Footer";
-import Navbar from "./components/Navbar";
+import Footer from "./page/Footer";
+import Navbar from "./page/Navbar";
 import Courses from "./page/Courses";
 import CourseDetails from "./page/CourseDetails";
 import CourseQuiz from "./components/CourseQuiz";
@@ -14,6 +14,9 @@ import CoursesExams from "./components/CoursesExams";
 import { Toaster } from "./components/ui/toaster";
 import GlobalExams from "./page/GlobalExams";
 import ExamScreen from "./components/ExamScreen";
+import VerifyEmail from "./page/VerifyEmail";
+import EmailVerified from "./page/EmailVerifyed";
+import CheckEmail from "./page/CheckEmail";
 
 function App() {
   const location = useLocation();
@@ -26,9 +29,12 @@ function App() {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/check-email" element={<CheckEmail />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/email-verified" element={<EmailVerified />} />
         {/* <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} /> */}
-        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Home />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
         <Route path="/courses/:courseId/quiz/:quizId" element={<CourseQuiz />} />

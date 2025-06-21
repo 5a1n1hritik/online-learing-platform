@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { loginSchema, registerSchema } from "../validators/authValidator.js";
+import { sendVerificationEmail } from "../utils/emailService.js";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,6 +25,16 @@ export const registerUser = async (req, res) => {
     const user = await prisma.user.create({
       data: { name, email, password: hashedPassword, role: Role.STUDENT },
     });
+
+    // Generate email verification token
+    const emailToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_EMAIL_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    // Send verification email
+    await sendVerificationEmail(email, name, emailToken);
 
     res.status(201).json({
       message: "User registered successfully",
@@ -60,6 +71,12 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
+
+    if (!user.isVerified) {
+      return res
+        .status(403)
+        .json({ message: "Please verify your email first" });
+    }
 
     // Tokens
     const accessToken = jwt.sign(
@@ -107,6 +124,59 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: error.errors[0].message });
     }
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ message: "Token missing" });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_EMAIL_SECRET);
+    const userId = decoded.userId;
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update user's email verification status
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true },
+    });
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    console.error("Email verification error:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const resendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    const emailToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_EMAIL_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    await sendVerificationEmail(user.email, user.name, emailToken);
+
+    return res.status(200).json({ message: "Verification email resent" });
+  } catch (err) {
+    console.error("Resend failed:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

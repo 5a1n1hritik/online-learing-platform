@@ -7,7 +7,6 @@ import {
   BookOpen,
   FileText,
   LogIn,
-  UserPlus,
   User,
   Settings,
   HelpCircle,
@@ -32,14 +31,14 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ThemeToggle from "./ThemeToggle";
+import ThemeToggle from "../components/ThemeToggle";
 import { useUser } from "@/context/UserContext";
 import { Separator } from "@radix-ui/react-dropdown-menu";
 
 const routes = [
   {
-    href: "/",
-    label: "Home",
+    href: "/dashboard",
+    label: "Explore",
     icon: Home,
     authOnly: false,
   },
@@ -60,14 +59,7 @@ const routes = [
     label: "Login",
     icon: LogIn,
     authOnly: false,
-    hideWhenAuthenticated: true,
-  },
-  {
-    href: "/register",
-    label: "Register",
-    icon: UserPlus,
-    authOnly: false,
-    hideWhenAuthenticated: true,
+    // hideWhenAuthenticated: true,
   },
 ];
 
@@ -90,7 +82,8 @@ const secondaryNavItems = [
 ];
 
 const Navbar = () => {
-  const { user } = useUser();
+  const { user, logout } = useUser();
+  const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -116,9 +109,12 @@ const Navbar = () => {
         mounted ? "translate-y-0 opacity-100" : "-translate-y-5 opacity-0"
       )}
     >
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6 md:gap-10">
-          <Link to="/" className="flex items-center space-x-2 animate-fade-in">
+          <Link
+            to="/dashboard"
+            className="flex items-center space-x-2 animate-fade-in"
+          >
             <span className="text-xl font-bold tracking-tight gradient-heading">
               EduLearn
             </span>
@@ -126,22 +122,22 @@ const Navbar = () => {
           <nav className="hidden md:flex gap-6">
             {routes
               .filter((route) => !(user && route.hideWhenAuthenticated))
-            .map((route, index) => (
-              <Link
-                key={route.href}
-                to={route.href}
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary relative py-1",
-                  pathname === route.href
-                    ? "text-primary after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-primary after:content-['']"
-                    : "text-muted-foreground",
-                  "animate-fade-in"
-                )}
-                style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
-              >
-                {route.label}
-              </Link>
-            ))}
+              .map((route, index) => (
+                <Link
+                  key={route.href}
+                  to={route.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary relative py-1",
+                    pathname === route.href
+                      ? "text-primary after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-primary after:content-['']"
+                      : "text-muted-foreground",
+                    "animate-fade-in"
+                  )}
+                  style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
+                >
+                  {route.label}
+                </Link>
+              ))}
           </nav>
         </div>
         <div className="flex items-center gap-4">
@@ -156,14 +152,25 @@ const Navbar = () => {
                 style={{ animationDelay: "0.6s" }}
               >
                 <AvatarImage
-                  src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
+                  src={
+                    user?.avatarUrl ||
+                    `https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`
+                  }
                   alt={user?.name || "User"}
                 />
-                <AvatarFallback>{user?.name || "U"}</AvatarFallback>
+                <AvatarFallback>
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                    : "US"}
+                </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="animate-slide-up">
-              <DropdownMenuLabel className="text-sm">
+            <DropdownMenuContent align="end" className="animate-slide-up w-48">
+              <DropdownMenuLabel className="text-sm font-semibold">
                 {user?.name?.replace(/\b\w/g, (l) => l.toUpperCase()) ||
                   "Student"}
               </DropdownMenuLabel>
@@ -171,36 +178,40 @@ const Navbar = () => {
               <DropdownMenuItem asChild>
                 <Link
                   to="/profile"
-                  className="animate-slide-in-right"
+                  className="w-full text-left animate-slide-in-right"
                   style={{ animationDelay: "0.1s" }}
                 >
+                  <User className="mr-2 h-5 w-5" />
                   Profile
                 </Link>
               </DropdownMenuItem>
+
               <DropdownMenuItem asChild>
                 <Link
                   to="/settings"
-                  className="animate-slide-in-right"
+                  className="w-full text-left animate-slide-in-right"
                   style={{ animationDelay: "0.3s" }}
                 >
+                  <Settings className="mr-2 h-5 w-5" />
                   Settings
                 </Link>
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/logout"
-                  className="animate-slide-in-right"
-                  style={{ animationDelay: "0.4s" }}
-                >
-                  Logout
-                </Link>
+
+              <DropdownMenuItem
+                onClick={logout}
+                className="text-destructive cursor-pointer animate-slide-in-right"
+                style={{ animationDelay: "0.4s" }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Mobile Menu */}
-          <Sheet>
+          <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
@@ -273,12 +284,23 @@ const Navbar = () => {
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage
-                        src={`https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`}
+                        src={
+                          user?.avatarUrl ||
+                          `https://avatar.vercel.sh/${user?.name}.png?height=32&width=32`
+                        }
                         alt={user?.name || "User"}
                       />
-                      <AvatarFallback>{user?.name || "U"}</AvatarFallback>
+                      <AvatarFallback>
+                        {user?.name
+                          ? user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                          : "US"}
+                      </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <p className="text-sm font-medium">
                         {user?.name?.replace(/\b\w/g, (l) => l.toUpperCase()) ||
                           "Student"}
@@ -288,11 +310,15 @@ const Navbar = () => {
                       </p>
                     </div>
                   </div>
-                  <Link to="/logout">
-                    <Button variant="ghost" size="icon" title="Logout">
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </Link>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Logout"
+                    onClick={logout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
                 </div>
               </SheetFooter>
             </SheetContent>

@@ -9,7 +9,9 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">EduLearn</h3>
             <p className="text-sm text-muted-foreground">
-              A modern online learning platform for students and professionals.
+              A modern online learning platform designed specifically to help
+              you prepare for government job exams like UPSC, SSC, Banking,
+              Railways, and more.
             </p>
           </div>
           <div>
@@ -17,10 +19,10 @@ const Footer = () => {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  to="/"
+                  to="/dashboard"
                   className="text-muted-foreground hover:text-primary"
                 >
-                  Home
+                  Explore
                 </Link>
               </li>
               <li>
