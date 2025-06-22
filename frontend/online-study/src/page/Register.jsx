@@ -49,16 +49,13 @@ const Register = () => {
       setLoading(true);
       setError("");
 
-      const response = await API.post(
-        "auth/register",
-        {
-          name: `${firstName} ${lastName}`,
-          email,
-          password,
-        }
-      );
+      const response = await API.post("/auth/register", {
+        name: `${firstName} ${lastName}`,
+        email,
+        password,
+      });
 
-      navigate("/check-email");
+      navigate("/verify-otp", { state: { email } });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed!");
     } finally {
@@ -141,6 +138,7 @@ const Register = () => {
                 required
               />
             </div>
+
             {error && <div className="text-red-500 text-sm">{error}</div>}
 
             <Button type="submit" className="w-full" disabled={loading}>
@@ -148,7 +146,6 @@ const Register = () => {
             </Button>
 
             <Separator />
-
           </CardContent>
 
           <CardFooter className="flex justify-center">

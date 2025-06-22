@@ -3,12 +3,12 @@ import {
   registerUser,
   loginUser,
   getProfile,
-  forgotPassword,
-  resetPassword,
   refreshAccessToken,
   logoutUser,
-  verifyEmail,
-  resendVerificationEmail,
+  resendOtponEmail,
+  verifyOtp,
+  verifyResetPasswordOtp,
+  requestPasswordResetOtp,
 } from "../controllers/auth.controller.js";
 import { loginRateLimiter } from "../middlewares/rateLimiter.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
@@ -16,14 +16,14 @@ const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginRateLimiter, loginUser);
-router.get("/verify-email",  verifyEmail);
-router.post("/resend-verification", resendVerificationEmail);
+router.post("/resend-otp", resendOtponEmail);
+router.post("/verify-otp", verifyOtp);
 
 router.get("/profile", verifyToken, getProfile);
 
 router.post("/refresh-token", refreshAccessToken);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password/:token", resetPassword);
+router.post("/request-password-reset-otp", requestPasswordResetOtp);
+router.post("/verify-reset-password-otp", verifyResetPasswordOtp);
 
 router.post("/logout", logoutUser);
 

@@ -83,6 +83,8 @@ model User {
   avatarUrl         String?
   bio               String?
   isVerified        Boolean            @default(false)
+  otpCode           String?   
+  otpExpiresAt      DateTime? 
   courses           Enrollment[]
   instructedCourses Course[]           @relation("UserToCourses")
   quizSubmissions   QuizSubmission[]

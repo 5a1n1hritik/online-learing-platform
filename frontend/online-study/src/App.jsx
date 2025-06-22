@@ -2,8 +2,8 @@ import React from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Register from "./page/Register";
 import Login from "./page/Login";
-import ForgotPassword from "./components/ForgotPassword";
-import ResetPassword from "./components/ResetPassword";
+import ForgotPassword from "./page/ForgotPassword";
+import ResetPassword from "./page/ResetPassword";
 import Home from "./page/Home";
 import Footer from "./page/Footer";
 import Navbar from "./page/Navbar";
@@ -30,10 +30,10 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/check-email" element={<CheckEmail />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/verify-otp" element={<VerifyEmail />} />
         <Route path="/email-verified" element={<EmailVerified />} />
-        {/* <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} /> */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Home />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetails />} />

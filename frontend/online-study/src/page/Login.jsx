@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,16 @@ const Login = () => {
   const [error, setError] = useState("");
   const [showResend, setShowResend] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
+  const [resendStatusType, setResendStatusType] = useState(""); 
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,39 +42,45 @@ const Login = () => {
     try {
       await login(email, password);
     } catch (err) {
-      console.error(err);
       const msg = err.response?.data?.message || "Login failed. Please try again.";
       setError(msg);
 
       if (msg === "Please verify your email first") {
         setShowResend(true);
+        setResendCooldown(30);
       }
     }
   };
 
   const handleResendEmail = async () => {
+    setResending(true);
+    setResendStatus("");
+
     try {
-      setResendStatus("Sending...");
-      await API.post("/auth/resend-verification", { email });
-      setResendStatus("Verification email sent. Please check your inbox.");
+      await API.post("/auth/resend-otp", { email });
+      setResendStatus("OTP has been resent. Please check your inbox.");
+      setResendStatusType("success");
+      setResendCooldown(30);
     } catch (err) {
       setResendStatus(
-        err.response?.data?.message || "Failed to resend verification email."
+        err.response?.data?.message || "Failed to resend OTP. Please try again."
       );
+      setResendStatusType("error");
+    } finally {
+      setResending(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 flex items-center justify-center">
-      <Card className="mx-auto max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">
-            Login to your account
-          </CardTitle>
+      <Card className="w-full max-w-md shadow-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Login to your account</CardTitle>
           <CardDescription>
-            Enter your email and password to login to your account
+            Enter your email and password to access your account.
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -72,18 +88,19 @@ const Login = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -91,6 +108,7 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -98,37 +116,46 @@ const Login = () => {
             </div>
 
             {error && (
-              <div className="text-red-500 text-sm">
-                {error}
+              <div className="text-red-500 text-sm space-y-2">
+                <p>{error}</p>
                 {showResend && (
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      className="text-sm text-blue-600 underline"
-                      onClick={handleResendEmail}
-                    >
-                      Resend Verification Email
-                    </button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={handleResendEmail}
+                    disabled={resending || resendCooldown > 0}
+                    className="text-sm p-0 h-auto"
+                  >
+                    {resending
+                      ? "Sending..."
+                      : resendCooldown > 0
+                      ? `Resend OTP in ${resendCooldown}s`
+                      : "Resend Verification OTP"}
+                  </Button>
                 )}
               </div>
             )}
 
             {resendStatus && (
-              <div className="text-sm text-green-600">{resendStatus}</div>
+              <div
+                className={`text-sm ${
+                  resendStatusType === "success" ? "text-green-600" : "text-red-500"
+                }`}
+              >
+                {resendStatus}
+              </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            >
+            <Button type="submit" className="w-full">
               Login
             </Button>
           </form>
+
           <Separator />
         </CardContent>
+
         <CardFooter className="flex justify-center">
-          <div className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link
               to="/register"
@@ -136,7 +163,7 @@ const Login = () => {
             >
               Register
             </Link>
-          </div>
+          </p>
         </CardFooter>
       </Card>
     </div>
