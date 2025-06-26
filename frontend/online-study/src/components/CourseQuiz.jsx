@@ -10,6 +10,7 @@ import {
   Medal,
   Scale,
   Timer,
+  ZoomIn,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -75,6 +76,7 @@ const CourseQuiz = () => {
           `/quizzes/${quizId}/questions?language=${language}`
         );
         setQuestions(response.data.questions);
+        console.log("Fetched questions:", response.data.questions);
       } catch (error) {
         console.error("Failed to fetch questions:", error);
       } finally {
@@ -207,7 +209,9 @@ const CourseQuiz = () => {
       <div className="container max-w-4xl py-8 px-4 sm:px-6">
         <Card className="animate-fade-in">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl gradient-heading">{quizData.title}</CardTitle>
+            <CardTitle className="text-2xl gradient-heading">
+              {quizData.title}
+            </CardTitle>
             <CardDescription>{quizData.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -357,10 +361,51 @@ const CourseQuiz = () => {
 
       <Card className="animate-fade-in">
         <CardHeader>
-          <CardTitle className="text-xl">
+          <CardTitle className="text-xl mb-2">
             {questions[currentQuestion]?.question}
           </CardTitle>
+
+          {/* {questions[currentQuestion]?.imageUrl && (
+        <img
+          src={questions[currentQuestion].imageUrl}
+          alt="Question"
+          className="max-w-full h-auto mb-3 rounded"
+        />
+      )} */}
+          {questions[currentQuestion]?.imageUrl && (
+            <div className="relative w-full max-w-md mx-auto mb-4">
+              <img
+                src={questions[currentQuestion].imageUrl}
+                alt="Question"
+                className="rounded-lg border shadow-sm object-contain w-full h-auto"
+                crossOrigin="anonymous"
+              />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0"
+                    title="View full size"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img
+                      src={questions[currentQuestion].imageUrl}
+                      alt="Zoomed"
+                      className="max-w-full max-h-full object-contain"
+                      crossOrigin="anonymous"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
         </CardHeader>
+
         <CardContent>
           <RadioGroup
             value={answers[questions[currentQuestion]?.id] || ""}

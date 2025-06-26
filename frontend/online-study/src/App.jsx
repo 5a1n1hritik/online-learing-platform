@@ -15,8 +15,8 @@ import { Toaster } from "./components/ui/toaster";
 import GlobalExams from "./page/GlobalExams";
 import ExamScreen from "./components/ExamScreen";
 import VerifyEmail from "./page/VerifyEmail";
-import EmailVerified from "./page/EmailVerifyed";
-import CheckEmail from "./page/CheckEmail";
+// import EmailVerified from "./page/EmailVerifyed";
+// import CheckEmail from "./page/CheckEmail";
 
 function App() {
   const location = useLocation();
@@ -29,9 +29,9 @@ function App() {
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/check-email" element={<CheckEmail />} />
+        {/* <Route path="/check-email" element={<CheckEmail />} /> */}
         <Route path="/verify-otp" element={<VerifyEmail />} />
-        <Route path="/email-verified" element={<EmailVerified />} />
+        {/* <Route path="/email-verified" element={<EmailVerified />} /> */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Home />} />

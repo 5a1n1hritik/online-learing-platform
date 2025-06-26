@@ -74,6 +74,11 @@ enum SubmissionStatus {
   PENDING
 }
 
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model User {
   id                Int                @id @default(autoincrement())
   name              String
@@ -85,18 +90,22 @@ model User {
   isVerified        Boolean            @default(false)
   otpCode           String?   
   otpExpiresAt      DateTime? 
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime           @default(now())      
+  updatedAt         DateTime           @updatedAt
+
   courses           Enrollment[]
   instructedCourses Course[]           @relation("UserToCourses")
   quizSubmissions   QuizSubmission[]
   examSubmissions   ExamSubmission[]
   activityStats     UserActivityStats?
-  resetToken        String?
-  resetTokenExpiry  DateTime?
   refreshTokens     RefreshToken[]
   CourseProgress    CourseProgress[]
   CourseReview      CourseReview[]
   LessonProgress    LessonProgress[]
   examActivities    ExamActivity[]
+  auditLogs         AuditLog[]
 }
 
 model RefreshToken {
@@ -119,6 +128,7 @@ model Course {
   studentsCount  Int              @default(0)
   level          CourseLevel      @default(BEGINNER)
   duration       Int              @default(0)
+  status         CourseStatus     @default(DRAFT)
   instructor     User             @relation("UserToCourses", fields: [instructorId], references: [id], onDelete: Cascade)
   instructorId   Int
   categories     Category[]       @relation("CourseCategories")
@@ -142,6 +152,16 @@ model Category {
   children    Category[] @relation("CategoryHierarchy")
   courses     Course[]   @relation("CourseCategories")
   exams       Exam[]
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  userId    Int
+  details   String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model CourseContent {
@@ -245,6 +265,7 @@ model QuizQuestion {
   id          Int          @id @default(autoincrement())
   question_en String
   question_hi String
+  imageUrl    String?
   options     QuizOption[]
   difficulty  Difficulty   @default(MEDIUM)
   quiz        Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)

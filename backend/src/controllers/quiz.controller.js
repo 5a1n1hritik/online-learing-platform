@@ -320,16 +320,26 @@ export const getQuizQuestions = async (req, res) => {
       include: { options: true },
     });
 
-    const localizedQuestions = questions.map((q) => ({
-      id: q.id,
-      question: language === "hi" ? q.question_hi : q.question_en,
-      difficulty: q.difficulty,
-      options: q.options.map((opt) => ({
-        id: opt.id,
-        label: opt.label,
-        text: language === "hi" ? opt.text_hi : opt.text_en,
-      })),
-    }));
+    const localizedQuestions = questions.map((q) => {
+      const isExternalUrl = q.imageUrl?.startsWith("http");
+      const fullImageUrl = isExternalUrl
+        ? q.imageUrl
+        : q.imageUrl
+        ? `${req.protocol}://${req.get("host")}${q.imageUrl}`
+        : null;
+
+      return {
+        id: q.id,
+        question: language === "hi" ? q.question_hi : q.question_en,
+        difficulty: q.difficulty,
+        imageUrl: fullImageUrl,
+        options: q.options.map((opt) => ({
+          id: opt.id,
+          label: opt.label,
+          text: language === "hi" ? opt.text_hi : opt.text_en,
+        })),
+      };
+    });
 
     res.status(200).json({
       success: true,
