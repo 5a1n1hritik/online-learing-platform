@@ -13,8 +13,15 @@ export const UserProvider = ({ children }) => {
     const fetchUserData = async () => {
       const accessToken = sessionStorage.getItem("accessToken");
       if (!accessToken) {
-        setIsLoading(false);
-        return; // no token, skip request
+        try {
+          const res = await API.post("/auth/refresh-token");
+          accessToken = res.data.accessToken;
+          sessionStorage.setItem("accessToken", accessToken);
+        } catch (err) {
+          console.log("Could not refresh token on load");
+          setIsLoading(false);
+          return;
+        }
       }
 
       try {

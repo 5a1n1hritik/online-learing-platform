@@ -237,6 +237,21 @@
   }
 }
 
+/* Responsive layout for sidebar */
+.peer-data-\[collapsed\=true\]:md:ml-16 {
+  margin-left: 4rem;
+}
+
+@media (min-width: 768px) {
+  .peer[data-collapsed="true"] ~ * {
+    margin-left: 4rem;
+  }
+
+  .peer[data-collapsed="false"] ~ * {
+    margin-left: 16rem;
+  }
+}
+
 /* Quiz and Exam Styles */
 .quiz-option {
   @apply relative flex items-center p-4 rounded-lg border-2 border-muted transition-all duration-200 hover:border-primary/50 cursor-pointer;

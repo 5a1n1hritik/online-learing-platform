@@ -15,6 +15,9 @@ import { Toaster } from "./components/ui/toaster";
 import GlobalExams from "./page/GlobalExams";
 import ExamScreen from "./components/ExamScreen";
 import VerifyEmail from "./page/VerifyEmail";
+import AdminDashboard from "./page/admin/AdminDashboard";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminUsers from "./page/admin/AdminUsers";
 // import EmailVerified from "./page/EmailVerifyed";
 // import CheckEmail from "./page/CheckEmail";
 
@@ -41,6 +44,13 @@ function App() {
         <Route path="/courses/:courseId/exam/:examId" element={<CoursesExams />} />
         <Route path="/globalexams" element={<GlobalExams />} />
         <Route path="/globalexams/:examId/start" element={<ExamScreen />} />
+
+        <Route path="/admin/*" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          {/* <Route path="courses" element={<AdminCourses />} /> */}
+          {/* <Route path="quizzes" element={<AdminQuizzes />} /> */}
+        </Route>
       </Routes>
 
       <Toaster />
