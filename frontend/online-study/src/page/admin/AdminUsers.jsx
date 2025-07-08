@@ -170,9 +170,9 @@ const AdminUsers = () => {
                   key={user.id}
                   className="course-card p-4 border rounded-lg"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <Avatar className="w-10 h-10 shrink-0">
                         <AvatarImage src={user.avatar || "/placeholder.svg"} />
                         <AvatarFallback>
                           {user.name

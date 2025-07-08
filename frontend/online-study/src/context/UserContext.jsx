@@ -11,7 +11,7 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const accessToken = sessionStorage.getItem("accessToken");
+      let accessToken = sessionStorage.getItem("accessToken");
       if (!accessToken) {
         try {
           const res = await API.post("/auth/refresh-token");

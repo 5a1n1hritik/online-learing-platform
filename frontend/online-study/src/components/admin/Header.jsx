@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Search, User, Settings, LogOut } from "lucide-react";
+import { Bell, Search, User, Settings, LogOut, Menu, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { useUser } from "@/context/UserContext";
 import ThemeToggle from "../ThemeToggle";
@@ -17,10 +17,11 @@ import ThemeToggle from "../ThemeToggle";
 const Header = () => {
   const { user, logout } = useUser();
   const navigate = useNavigate();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
   return (
     <header className="bg-background border-b border-border px-3 sm:px-4 lg:px-6 py-3 sm:py-3 flex-shrink-0">
       <div className="flex items-center justify-between">
-
         {/* Left side - Search (hidden on mobile, shown on tablet+) */}
         <div className="hidden sm:flex items-center space-x-4 flex-1 max-w-md">
           <div className="relative w-full">
@@ -33,10 +34,30 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile search button */}
-        <div className="sm:hidden">
-          <Button variant="ghost" size="sm">
-            <Search className="w-5 h-5" />
+        {/* Sidebar Toggle & Search - Mobile only */}
+        <div className="flex sm:hidden items-center space-x-2">
+          {/* Sidebar Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("toggle-sidebar"))
+            }
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+
+          {/* Search Icon */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileSearchOpen((prev) => !prev)}
+          >
+            {mobileSearchOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
           </Button>
         </div>
 
@@ -59,7 +80,8 @@ const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
+                className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full"
+              >
                 <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                   <AvatarImage
                     src={
@@ -110,6 +132,16 @@ const Header = () => {
           </DropdownMenu>
         </div>
       </div>
+      {/* Mobile Search Input Field Below Header */}
+      {mobileSearchOpen && (
+        <div className="mt-3 sm:hidden">
+          <Input
+            type="text"
+            placeholder="Search..."
+            className="w-full px-4 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-sm text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+      )}
     </header>
   );
 };

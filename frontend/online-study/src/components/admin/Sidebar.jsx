@@ -9,8 +9,6 @@ import {
   GraduationCap,
   BarChart3,
   Settings,
-  Menu,
-  X,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -44,40 +42,13 @@ const Sidebar = ({ className = "" }) => {
 
   // Auto-collapse sidebar on mobile
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsCollapsed(false);
-        setIsMobileOpen(false);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => window.removeEventListener("resize", handleResize);
+    const handleToggle = () => setIsMobileOpen((prev) => !prev);
+    window.addEventListener("toggle-sidebar", handleToggle);
+    return () => window.removeEventListener("toggle-sidebar", handleToggle);
   }, []);
-
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
 
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="fixed top-3 left-3 z-50 md:hidden shadow-md"
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-      >
-        {isMobileOpen ? (
-          <X className="w-5 h-5" />
-        ) : (
-          <Menu className="w-5 h-5" />
-        )}
-      </Button>
-
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
@@ -207,13 +178,15 @@ const Sidebar = ({ className = "" }) => {
             >
               <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-medium text-white">
-                  {user?.name
-                    ? user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                    : <Users className="w-4 h-4" />}
+                  {user?.name ? (
+                    user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                  ) : (
+                    <Users className="w-4 h-4" />
+                  )}
                 </span>
               </div>
               {!isCollapsed && (
